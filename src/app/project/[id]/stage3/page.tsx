@@ -8,6 +8,7 @@ import Timeline from '@/components/stage3/Timeline'
 import TalkingAvatarPanel from '@/components/stage3/TalkingAvatarPanel'
 import DialogueSyncPanel from '@/components/stage3/DialogueSyncPanel'
 import TransitionLibrary from '@/components/stage3/TransitionLibrary'
+import ShotPromptOptimizer from '@/components/stage3/ShotPromptOptimizer'
 import EpisodePanel from '@/components/stage3/EpisodePanel'
 import Button from '@/components/shared/Button'
 import Spinner from '@/components/shared/Spinner'
@@ -110,6 +111,9 @@ export default function Stage3Page() {
 
       {/* 转场特效库 */}
       <TransitionLibrary />
+
+      {/* 镜头Prompt优化 */}
+      <ShotPromptOptimizer />
 
       {/* 下一步 */}
       <div className="flex justify-end pt-4 border-t border-[#2a2a3e]">

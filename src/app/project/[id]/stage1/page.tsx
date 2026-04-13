@@ -9,6 +9,9 @@ import EmotionalArcPanel from '@/components/stage1/EmotionalArcPanel'
 import OpeningPicker from '@/components/stage1/OpeningPicker'
 import ScriptEditor from '@/components/stage1/ScriptEditor'
 import ScriptContinuePanel from '@/components/stage1/ScriptContinuePanel'
+import HookLibraryPanel from '@/components/stage1/HookLibraryPanel'
+import RetentionAdvisor from '@/components/stage1/RetentionAdvisor'
+import DialoguePolishPanel from '@/components/stage1/DialoguePolishPanel'
 import Button from '@/components/shared/Button'
 
 export default function Stage1Page() {
@@ -51,6 +54,15 @@ export default function Stage1Page() {
 
       {/* AI 剧本助手 */}
       <ScriptContinuePanel />
+
+      {/* 爆款桥段库 */}
+      <HookLibraryPanel />
+
+      {/* 完播率优化分析 */}
+      <RetentionAdvisor />
+
+      {/* 对话智能润色 */}
+      <DialoguePolishPanel />
 
       {/* 下一步 */}
       <div className="flex justify-end pt-4 border-t border-[#2a2a3e]">
