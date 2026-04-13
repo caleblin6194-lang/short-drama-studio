@@ -1,9 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useProjectStore } from '@/store/useProjectStore'
 import ShotCard from '@/components/stage3/ShotCard'
 import Timeline from '@/components/stage3/Timeline'
+import TalkingAvatarPanel from '@/components/stage3/TalkingAvatarPanel'
 import Button from '@/components/shared/Button'
 import Spinner from '@/components/shared/Spinner'
 import ProgressBar from '@/components/shared/ProgressBar'
@@ -54,6 +56,9 @@ export default function Stage3Page() {
       {shots.length > 0 && (
         <ProgressBar value={progress} label={`拍摄进度 (${donePipelines}/${totalPipelines})`} />
       )}
+
+      {/* AI 说话数字人 */}
+      <TalkingAvatarPanel />
 
       {/* 时间线 */}
       <Timeline shots={shots} />

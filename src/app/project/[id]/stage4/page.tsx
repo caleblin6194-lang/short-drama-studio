@@ -5,6 +5,7 @@ import { useProjectStore } from '@/store/useProjectStore'
 import VideoPlayer from '@/components/stage4/VideoPlayer'
 import SubtitleBGMPanel from '@/components/stage4/SubtitleBGMPanel'
 import SubtitleStylePanel from '@/components/stage4/SubtitleStylePanel'
+import SmartAudioPanel from '@/components/stage4/SmartAudioPanel'
 import ExportPanel from '@/components/stage4/ExportPanel'
 import VariantList from '@/components/stage4/VariantList'
 import Button from '@/components/shared/Button'
@@ -27,6 +28,7 @@ export default function Stage4Page() {
   const tabs = [
     { key: 'settings', label: '设置' },
     { key: 'subtitle', label: '字幕样式' },
+    { key: 'audio', label: 'AI 配乐' },
     { key: 'chat', label: '对话剪辑' },
   ]
 
@@ -77,6 +79,13 @@ export default function Stage4Page() {
                 <SubtitleStylePanel
                   style={mc.subtitleStyle}
                   onChange={setSubtitleStyle}
+                />
+              )}
+
+              {activeTab === 'audio' && (
+                <SmartAudioPanel
+                  currentBgmEnabled={mc.bgmEnabled}
+                  currentBgmTrack={mc.bgmTrack}
                 />
               )}
 

@@ -6,6 +6,9 @@ import StatCard from '@/components/shared/StatCard'
 import CreditBar from '@/components/dashboard/CreditBar'
 import TransactionRow from '@/components/dashboard/TransactionRow'
 import UsageChart from '@/components/dashboard/UsageChart'
+import ViralPanel from '@/components/shared/ViralPanel'
+import InspirationCenter from '@/components/shared/InspirationCenter'
+import TemplateLibrary from '@/components/shared/TemplateLibrary'
 
 export default function DashboardOverviewPage() {
   const { balance, transactions, dailyUsage } = useCreditsStore()
@@ -15,7 +18,14 @@ export default function DashboardOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-white">仪表盘</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white">仪表盘</h2>
+        <div className="flex items-center gap-2">
+          <TemplateLibrary />
+          <InspirationCenter />
+          <ViralPanel />
+        </div>
+      </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

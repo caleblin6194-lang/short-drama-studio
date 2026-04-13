@@ -1,0 +1,62 @@
+{
+  "common": {
+    "appName": "AI 短剧工坊",
+    "loading": "加载中...",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "delete": "删除",
+    "edit": "编辑",
+    "next": "下一步",
+    "prev": "上一步",
+    "generate": "生成",
+    "applying": "应用中...",
+    "success": "成功",
+    "error": "错误",
+    "credits": "积分",
+    "settings": "设置"
+  },
+  "nav": {
+    "dashboard": "仪表盘",
+    "projects": "项目",
+    "analytics": "分析",
+    "credits": "积分",
+    "subscription": "订阅",
+    "admin": "管理"
+  },
+  "stage1": {
+    "title": "第一步：故事",
+    "subtitle": "选择标签定义你的短剧，AI 自动推导拍摄参数",
+    "generateOpenings": "生成开场白",
+    "scriptPlaceholder": "输入或编辑你的剧本..."
+  },
+  "stage2": {
+    "title": "第二步：剧组筹备",
+    "subtitle": "选择场景、角色和道具"
+  },
+  "stage3": {
+    "title": "第三步：开机拍摄",
+    "subtitle": "AI 自动生成每个镜头的图像、视频和音频",
+    "generateShots": "生成镜头",
+    "autoShoot": "自动开拍",
+    "shooting": "拍摄中..."
+  },
+  "stage4": {
+    "title": "第四步：成片预览",
+    "subtitle": "预览、调整字幕和 BGM，导出或生成地域变体",
+    "render": "渲染成片",
+    "rendering": "正在渲染..."
+  },
+  "dashboard": {
+    "overview": "仪表盘",
+    "remainingCredits": "剩余积分",
+    "monthlyUsage": "本月已用",
+    "totalProjects": "项目总数",
+    "published": "已发布"
+  },
+  "settings": {
+    "title": "设置",
+    "language": "语言",
+    "languageDesc": "选择界面显示语言"
+  }
+}

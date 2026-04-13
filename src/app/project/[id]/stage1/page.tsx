@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useProjectStore } from '@/store/useProjectStore'
 import TagSelector from '@/components/stage1/TagSelector'
 import InferredConfigPanel from '@/components/stage1/InferredConfigPanel'
+import SmartPick from '@/components/shared/SmartPick'
 import OpeningPicker from '@/components/stage1/OpeningPicker'
 import ScriptEditor from '@/components/stage1/ScriptEditor'
 import Button from '@/components/shared/Button'
@@ -33,6 +34,9 @@ export default function Stage1Page() {
 
       {/* 自动推导配置 */}
       <InferredConfigPanel />
+
+      {/* Smart Pick */}
+      <SmartPick />
 
       {/* 开场白 */}
       <OpeningPicker />
