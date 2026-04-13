@@ -6,6 +6,7 @@ import { useProjectStore } from '@/store/useProjectStore'
 import ShotCard from '@/components/stage3/ShotCard'
 import Timeline from '@/components/stage3/Timeline'
 import TalkingAvatarPanel from '@/components/stage3/TalkingAvatarPanel'
+import DialogueSyncPanel from '@/components/stage3/DialogueSyncPanel'
 import EpisodePanel from '@/components/stage3/EpisodePanel'
 import Button from '@/components/shared/Button'
 import Spinner from '@/components/shared/Spinner'
@@ -102,6 +103,9 @@ export default function Stage3Page() {
 
       {/* AI 说话数字人 */}
       <TalkingAvatarPanel />
+
+      {/* 对话智能对齐 */}
+      <DialogueSyncPanel />
 
       {/* 下一步 */}
       <div className="flex justify-end pt-4 border-t border-[#2a2a3e]">
