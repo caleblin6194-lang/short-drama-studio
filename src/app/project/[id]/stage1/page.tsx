@@ -8,6 +8,7 @@ import SmartPick from '@/components/shared/SmartPick'
 import EmotionalArcPanel from '@/components/stage1/EmotionalArcPanel'
 import OpeningPicker from '@/components/stage1/OpeningPicker'
 import ScriptEditor from '@/components/stage1/ScriptEditor'
+import ScriptContinuePanel from '@/components/stage1/ScriptContinuePanel'
 import Button from '@/components/shared/Button'
 
 export default function Stage1Page() {
@@ -47,6 +48,9 @@ export default function Stage1Page() {
 
       {/* 剧本编辑器 */}
       <ScriptEditor />
+
+      {/* AI 剧本助手 */}
+      <ScriptContinuePanel />
 
       {/* 下一步 */}
       <div className="flex justify-end pt-4 border-t border-[#2a2a3e]">

@@ -46,6 +46,26 @@ export default function SmartAudioPanel({
   const [error, setError] = useState('')
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
+  // Suggest BGM based on episode emotional tone
+  const episodeToneToMood: Record<string, BgmMood> = {
+    setup: 'tender',
+    conflict: 'tension',
+    climax: 'epic',
+    resolution: 'uplifting',
+    cliffhanger: 'mysterious',
+  }
+
+  const currentEpisode = project?.episodes?.[0]
+  const suggestedMood = currentEpisode?.emotionalTone
+    ? episodeToneToMood[currentEpisode.emotionalTone]
+    : null
+
+  const handleMatchEpisode = () => {
+    if (suggestedMood) {
+      setSelectedMood(suggestedMood)
+    }
+  }
+
   const handleGenerate = useCallback(async () => {
     if (!selectedMood) { setError('请选择一个情绪风格'); return }
     if (!project) return
@@ -100,6 +120,35 @@ export default function SmartAudioPanel({
         <h3 className="text-sm font-semibold text-white">🎵 AI 智能配乐</h3>
         <p className="text-xs text-[#a0a0b8] mt-0.5">根据剧情情绪自动生成 BGM</p>
       </div>
+
+      {/* Episode emotion suggestion */}
+      {currentEpisode && suggestedMood && !selectedMood && (
+        <button
+          onClick={handleMatchEpisode}
+          className="w-full p-3 rounded-xl border border-dashed border-[#6c5ce7]/40 bg-[#6c5ce7]/5 text-left"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm">📊</span>
+            <div>
+              <div className="text-xs text-white">
+                第{currentEpisode.number}集情绪：
+                <span className="text-[#6c5ce7] font-medium">
+                  {currentEpisode.emotionalTone === 'setup' ? '🌅 铺垫' :
+                   currentEpisode.emotionalTone === 'conflict' ? '⚡ 冲突' :
+                   currentEpisode.emotionalTone === 'climax' ? '🔥 高潮' :
+                   currentEpisode.emotionalTone === 'resolution' ? '🌟 结局' : '❓ 悬念'}
+                </span>
+              </div>
+              <div className="text-[10px] text-[#6a6a8e] mt-0.5">
+                推荐 BGM：{suggestedMood === 'epic' ? '🎺 史诗' :
+                  suggestedMood === 'tender' ? '🎻 温馨' :
+                  suggestedMood === 'tension' ? '⏱ 紧张' :
+                  suggestedMood === 'uplifting' ? '☀️ 励志' : '🔮 神秘'} · 点击应用
+              </div>
+            </div>
+          </div>
+        </button>
+      )}
 
       {/* Mood Grid */}
       <div>
