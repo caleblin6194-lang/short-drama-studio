@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
 import Button from '@/components/shared/Button'
 import UserAvatar from '@/components/shared/UserAvatar'
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher'
+import { LOCALES, useLocale, useSetLocale } from '@/i18n/I18nProvider'
 
 export default function SettingsPage() {
   const { currentUser, updateProfile } = useAuthStore()
@@ -11,6 +13,8 @@ export default function SettingsPage() {
   const [email] = useState(currentUser?.email || '')
   const [saved, setSaved] = useState(false)
   const [notifications, setNotifications] = useState({ email: true, credits: true, marketing: false })
+  const currentLocale = useLocale()
+  const setLocale = useSetLocale()
 
   const handleSave = () => {
     updateProfile({ name })
@@ -53,6 +57,28 @@ export default function SettingsPage() {
           <input type="password" placeholder="当前密码" className="w-full bg-[#1a1a2e] border border-[#2a2a3e] rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#6c5ce7]" />
           <input type="password" placeholder="新密码" className="w-full bg-[#1a1a2e] border border-[#2a2a3e] rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#6c5ce7]" />
           <Button variant="secondary">更新密码</Button>
+        </div>
+      </div>
+
+      {/* Language */}
+      <div className="card p-6">
+        <h3 className="text-sm font-medium text-[#a0a0b8] mb-4">语言 / Language</h3>
+        <p className="text-xs text-[#6b6b8a] mb-4">选择界面显示语言 / Select interface display language</p>
+        <div className="flex flex-wrap gap-2">
+          {LOCALES.map(l => (
+            <button
+              key={l.key}
+              onClick={() => setLocale(l.key)}
+              className={`px-4 py-2 rounded-lg border text-sm transition-all ${
+                currentLocale === l.key
+                  ? 'border-[#6c5ce7] bg-[#6c5ce7]/10 text-white'
+                  : 'border-[#2a2a3e] bg-[#1a1a2e] text-[#a0a0b8] hover:border-[#6c5ce7]/50'
+              }`}
+            >
+              <span className="block text-white font-medium">{l.nativeLabel}</span>
+              <span className="block text-[10px] text-[#6b6b8a]">{l.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 

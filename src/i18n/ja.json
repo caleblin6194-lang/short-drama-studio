@@ -1,0 +1,62 @@
+{
+  "common": {
+    "appName": "AI ショートドラマ制作所",
+    "loading": "読み込み中...",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "delete": "削除",
+    "edit": "編集",
+    "next": "次へ",
+    "prev": "前へ",
+    "generate": "生成",
+    "applying": "应用中...",
+    "success": "成功",
+    "error": "エラー",
+    "credits": "クレジット",
+    "settings": "設定"
+  },
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "projects": "プロジェクト",
+    "analytics": "分析",
+    "credits": "クレジット",
+    "subscription": "購読",
+    "admin": "管理"
+  },
+  "stage1": {
+    "title": "ステップ1：ストーリー",
+    "subtitle": "タグを選択してドラマを定義、AIが撮影パラメータを自動導出",
+    "generateOpenings": "オープニング生成",
+    "scriptPlaceholder": "脚本を入力または編集..."
+  },
+  "stage2": {
+    "title": "ステップ2：制作準備",
+    "subtitle": "シーン、キャラクター、小道具を選択"
+  },
+  "stage3": {
+    "title": "ステップ3：撮影開始",
+    "subtitle": "AIが各ショットの画像、ビデオ、オーディオを自動生成",
+    "generateShots": "ショット生成",
+    "autoShoot": "自動撮影",
+    "shooting": "撮影中..."
+  },
+  "stage4": {
+    "title": "ステップ4：最終プレビュー",
+    "subtitle": "プレビュー、字幕とBGMの調整、書き出しまたは地域バリアント生成",
+    "render": "レンダリング",
+    "rendering": "レンダリング中..."
+  },
+  "dashboard": {
+    "overview": "ダッシュボード",
+    "remainingCredits": "残りクレジット",
+    "monthlyUsage": "今月の使用量",
+    "totalProjects": "プロジェクト総数",
+    "published": "公開済み"
+  },
+  "settings": {
+    "title": "設定",
+    "language": "言語",
+    "languageDesc": "インターフェース表示言語を選択"
+  }
+}

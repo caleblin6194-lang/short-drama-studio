@@ -1,0 +1,62 @@
+{
+  "common": {
+    "appName": "AI Short Drama Studio",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "next": "Next",
+    "prev": "Previous",
+    "generate": "Generate",
+    "applying": "Applying...",
+    "success": "Success",
+    "error": "Error",
+    "credits": "Credits",
+    "settings": "Settings"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "analytics": "Analytics",
+    "credits": "Credits",
+    "subscription": "Subscription",
+    "admin": "Admin"
+  },
+  "stage1": {
+    "title": "Step 1: Story",
+    "subtitle": "Select tags to define your drama, AI auto-derives shooting parameters",
+    "generateOpenings": "Generate Opening",
+    "scriptPlaceholder": "Enter or edit your script..."
+  },
+  "stage2": {
+    "title": "Step 2: Production Prep",
+    "subtitle": "Select scenes, characters, and props"
+  },
+  "stage3": {
+    "title": "Step 3: Start Shooting",
+    "subtitle": "AI auto-generates images, videos, and audio for each shot",
+    "generateShots": "Generate Shots",
+    "autoShoot": "Auto Shoot",
+    "shooting": "Shooting..."
+  },
+  "stage4": {
+    "title": "Step 4: Final Preview",
+    "subtitle": "Preview, adjust subtitles and BGM, export or generate regional variants",
+    "render": "Render Video",
+    "rendering": "Rendering..."
+  },
+  "dashboard": {
+    "overview": "Dashboard",
+    "remainingCredits": "Remaining Credits",
+    "monthlyUsage": "Monthly Used",
+    "totalProjects": "Total Projects",
+    "published": "Published"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "languageDesc": "Select interface display language"
+  }
+}

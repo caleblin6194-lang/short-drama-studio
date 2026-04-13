@@ -1,0 +1,62 @@
+{
+  "common": {
+    "appName": "AI 단편 드라마 제작소",
+    "loading": "로딩 중...",
+    "save": "저장",
+    "cancel": "취소",
+    "confirm": "확인",
+    "delete": "삭제",
+    "edit": "편집",
+    "next": "다음",
+    "prev": "이전",
+    "generate": "생성",
+    "applying": "적용 중...",
+    "success": "성공",
+    "error": "오류",
+    "credits": "크레딧",
+    "settings": "설정"
+  },
+  "nav": {
+    "dashboard": "대시보드",
+    "projects": "프로젝트",
+    "analytics": "분석",
+    "credits": "크레딧",
+    "subscription": "구독",
+    "admin": "관리"
+  },
+  "stage1": {
+    "title": "1단계: 스토리",
+    "subtitle": "태그를 선택하여 드라마를 정의하고, AI가 촬영 파라미터를 자동 추론",
+    "generateOpenings": "오프닝 생성",
+    "scriptPlaceholder": "대본을 입력하거나 편집하세요..."
+  },
+  "stage2": {
+    "title": "2단계: 제작 준비",
+    "subtitle": "장면, 캐릭터, 소품 선택"
+  },
+  "stage3": {
+    "title": "3단계: 촬영 시작",
+    "subtitle": "AI가 각 샷의 이미지, 비디오, 오디오를 자동 생성",
+    "generateShots": "샷 생성",
+    "autoShoot": "자동 촬영",
+    "shooting": "촬영 중..."
+  },
+  "stage4": {
+    "title": "4단계: 최종 미리보기",
+    "subtitle": "미리보기, 자막 및 BGM 조정, 내보내기 또는 지역 변형 생성",
+    "render": "렌더링",
+    "rendering": "렌더링 중..."
+  },
+  "dashboard": {
+    "overview": "대시보드",
+    "remainingCredits": "남은 크레딧",
+    "monthlyUsage": "이번 달 사용량",
+    "totalProjects": "총 프로젝트",
+    "published": "게시됨"
+  },
+  "settings": {
+    "title": "설정",
+    "language": "언어",
+    "languageDesc": "인터페이스 표시 언어 선택"
+  }
+}
