@@ -5,6 +5,7 @@ import { useProjectStore } from '@/store/useProjectStore'
 import TagSelector from '@/components/stage1/TagSelector'
 import InferredConfigPanel from '@/components/stage1/InferredConfigPanel'
 import SmartPick from '@/components/shared/SmartPick'
+import EmotionalArcPanel from '@/components/stage1/EmotionalArcPanel'
 import OpeningPicker from '@/components/stage1/OpeningPicker'
 import ScriptEditor from '@/components/stage1/ScriptEditor'
 import Button from '@/components/shared/Button'
@@ -37,6 +38,9 @@ export default function Stage1Page() {
 
       {/* Smart Pick */}
       <SmartPick />
+
+      {/* 情绪曲线 */}
+      <EmotionalArcPanel />
 
       {/* 开场白 */}
       <OpeningPicker />
