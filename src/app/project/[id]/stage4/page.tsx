@@ -12,6 +12,7 @@ import Button from '@/components/shared/Button'
 import Spinner from '@/components/shared/Spinner'
 import Tabs from '@/components/shared/Tabs'
 import TalkToEdit from '@/components/stage-chat/TalkToEdit'
+import CliffhangerPanel from '@/components/stage4/CliffhangerPanel'
 
 export default function Stage4Page() {
   const {
@@ -30,6 +31,7 @@ export default function Stage4Page() {
     { key: 'subtitle', label: '字幕样式' },
     { key: 'audio', label: 'AI 配乐' },
     { key: 'chat', label: '对话剪辑' },
+    { key: 'cliffhanger', label: '悬念结尾' },
   ]
 
   return (
@@ -91,6 +93,10 @@ export default function Stage4Page() {
 
               {activeTab === 'chat' && (
                 <TalkToEdit projectId={project.id} />
+              )}
+
+              {activeTab === 'cliffhanger' && (
+                <CliffhangerPanel />
               )}
             </>
           )}
