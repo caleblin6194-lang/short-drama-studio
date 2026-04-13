@@ -13,6 +13,7 @@ import Spinner from '@/components/shared/Spinner'
 import Tabs from '@/components/shared/Tabs'
 import TalkToEdit from '@/components/stage-chat/TalkToEdit'
 import CliffhangerPanel from '@/components/stage4/CliffhangerPanel'
+import EmotionalBGMMapper from '@/components/stage4/EmotionalBGMMapper'
 
 export default function Stage4Page() {
   const {
@@ -85,10 +86,13 @@ export default function Stage4Page() {
               )}
 
               {activeTab === 'audio' && (
-                <SmartAudioPanel
-                  currentBgmEnabled={mc.bgmEnabled}
-                  currentBgmTrack={mc.bgmTrack}
-                />
+                <>
+                  <SmartAudioPanel
+                    currentBgmEnabled={mc.bgmEnabled}
+                    currentBgmTrack={mc.bgmTrack}
+                  />
+                  <EmotionalBGMMapper />
+                </>
               )}
 
               {activeTab === 'chat' && (
