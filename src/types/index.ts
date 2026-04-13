@@ -135,11 +135,52 @@ export interface Shot {
   finalClipUrl?: string
 }
 
+// ===== Subtitle Style =====
+export type SubtitleAnimation = 'none' | 'fade' | 'typewriter' | 'bounce' | 'karaoke' | 'slide'
+export type SubtitlePosition = 'bottom' | 'top' | 'center'
+
+export interface SubtitleStyle {
+  animation: SubtitleAnimation
+  position: SubtitlePosition
+  fontSize: 'sm' | 'md' | 'lg'
+  fontColor: string
+  backgroundColor: string
+  backgroundEnabled: boolean
+}
+
+export const SUBTITLE_PRESETS: { label: string; value: SubtitleStyle }[] = [
+  {
+    label: '经典白字',
+    value: { animation: 'fade', position: 'bottom', fontSize: 'md', fontColor: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', backgroundEnabled: true },
+  },
+  {
+    label: '打字机',
+    value: { animation: 'typewriter', position: 'bottom', fontSize: 'md', fontColor: '#ffffff', backgroundColor: 'rgba(0,0,0,0.7)', backgroundEnabled: true },
+  },
+  {
+    label: '弹跳入场',
+    value: { animation: 'bounce', position: 'bottom', fontSize: 'md', fontColor: '#fff700', backgroundColor: 'rgba(0,0,0,0.5)', backgroundEnabled: true },
+  },
+  {
+    label: '卡拉OK',
+    value: { animation: 'karaoke', position: 'bottom', fontSize: 'md', fontColor: '#00ff88', backgroundColor: 'rgba(0,0,0,0.6)', backgroundEnabled: true },
+  },
+  {
+    label: '滑入',
+    value: { animation: 'slide', position: 'bottom', fontSize: 'md', fontColor: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', backgroundEnabled: true },
+  },
+  {
+    label: '顶部字幕',
+    value: { animation: 'fade', position: 'top', fontSize: 'sm', fontColor: '#ffffff', backgroundColor: 'rgba(0,0,0,0.5)', backgroundEnabled: true },
+  },
+]
+
 // ===== Master Cut =====
 export interface MasterCut {
   id: string
   projectId: string
   subtitlesEnabled: boolean
+  subtitleStyle: SubtitleStyle
   bgmEnabled: boolean
   bgmTrack?: string
   renderedUrl?: string

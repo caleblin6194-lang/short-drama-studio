@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import type { Project, TagSet, Shot, PipelineStage, Opening, RegionVariant, StoryBeatId, StoryStructurePlan } from '@/types'
+import type { Project, TagSet, Shot, PipelineStage, Opening, RegionVariant, StoryBeatId, StoryStructurePlan, SubtitleStyle } from '@/types'
 import { inferConfig } from '@/lib/inferConfig'
 import { createStoryStructurePlan, formatStoryStructureToScript } from '@/lib/storyStructure'
 import { useProjectListStore } from './useProjectListStore'
@@ -51,6 +51,7 @@ interface ProjectStoreState {
   // Stage 4
   renderMasterCut: () => Promise<void>
   toggleSubtitles: () => void
+  setSubtitleStyle: (style: SubtitleStyle) => void
   toggleBgm: () => void
   createVariant: (regionTag: string) => Promise<void>
 
@@ -361,6 +362,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
             id: uuid(),
             projectId: s.project.id,
             subtitlesEnabled: true,
+            subtitleStyle: { animation: 'fade', position: 'bottom', fontSize: 'md', fontColor: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', backgroundEnabled: true },
             bgmEnabled: true,
             bgmTrack: 'epic_tension',
             ...result,
@@ -378,6 +380,18 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         project: {
           ...s.project,
           masterCut: { ...s.project.masterCut, subtitlesEnabled: !s.project.masterCut.subtitlesEnabled },
+        },
+      }
+    })
+  },
+
+  setSubtitleStyle: (style) => {
+    set(s => {
+      if (!s.project?.masterCut) return s
+      return {
+        project: {
+          ...s.project,
+          masterCut: { ...s.project.masterCut, subtitleStyle: style },
         },
       }
     })

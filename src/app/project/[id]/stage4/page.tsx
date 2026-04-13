@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useProjectStore } from '@/store/useProjectStore'
 import VideoPlayer from '@/components/stage4/VideoPlayer'
 import SubtitleBGMPanel from '@/components/stage4/SubtitleBGMPanel'
+import SubtitleStylePanel from '@/components/stage4/SubtitleStylePanel'
 import ExportPanel from '@/components/stage4/ExportPanel'
 import VariantList from '@/components/stage4/VariantList'
 import Button from '@/components/shared/Button'
@@ -15,6 +16,7 @@ export default function Stage4Page() {
   const {
     project, renderMasterCut, isRendering,
     toggleSubtitles, toggleBgm, createVariant,
+    setSubtitleStyle,
   } = useProjectStore()
   const [activeTab, setActiveTab] = useState('settings')
 
@@ -24,6 +26,7 @@ export default function Stage4Page() {
 
   const tabs = [
     { key: 'settings', label: '设置' },
+    { key: 'subtitle', label: '字幕样式' },
     { key: 'chat', label: '对话剪辑' },
   ]
 
@@ -57,7 +60,7 @@ export default function Stage4Page() {
               {/* Tab 切换 */}
               <Tabs items={tabs} activeKey={activeTab} onChange={setActiveTab} />
 
-              {activeTab === 'settings' ? (
+              {activeTab === 'settings' && (
                 <>
                   <SubtitleBGMPanel
                     subtitlesEnabled={mc.subtitlesEnabled}
@@ -68,7 +71,16 @@ export default function Stage4Page() {
                   />
                   <ExportPanel />
                 </>
-              ) : (
+              )}
+
+              {activeTab === 'subtitle' && (
+                <SubtitleStylePanel
+                  style={mc.subtitleStyle}
+                  onChange={setSubtitleStyle}
+                />
+              )}
+
+              {activeTab === 'chat' && (
                 <TalkToEdit projectId={project.id} />
               )}
             </>

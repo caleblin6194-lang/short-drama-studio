@@ -169,7 +169,7 @@ export function createInitialProjects(): Project[] {
       script: { id: 'sc1', rawText: DEMO_SCRIPT, estimatedDurationSec: 75, characterCount: DEMO_SCRIPT.length, wordLimit: 10000, history: [] },
       assetLibrary: { scenes: DEMO_SCENES, characters: DEMO_CHARACTERS, props: DEMO_PROPS },
       shots: createDemoShots(11),
-      masterCut: { id: 'mc1', projectId: 'demo-1', subtitlesEnabled: true, bgmEnabled: true, bgmTrack: 'epic_tension', renderedUrl: '#', durationSec: 77 },
+      masterCut: { id: 'mc1', projectId: 'demo-1', subtitlesEnabled: true, subtitleStyle: { animation: 'fade', position: 'bottom', fontSize: 'md', fontColor: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', backgroundEnabled: true }, bgmEnabled: true, bgmTrack: 'epic_tension', renderedUrl: '#', durationSec: 77 },
       costSpent: 420,
     }),
     createEmptyProject({
