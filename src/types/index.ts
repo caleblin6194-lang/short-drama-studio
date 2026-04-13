@@ -93,6 +93,9 @@ export interface CharacterAsset extends AssetBase {
   tier: 'lead' | 'antagonist' | 'support' | 'extra'
   age?: string
   gender?: 'male' | 'female' | 'other'
+  isLocked: boolean
+  lockedImageUrl?: string
+  generationSeed?: string
 }
 
 export interface PropAsset extends AssetBase {

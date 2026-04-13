@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useProjectStore } from '@/store/useProjectStore'
 import AssetGrid from '@/components/stage2/AssetGrid'
+import CharacterConsistencyPanel from '@/components/stage2/CharacterConsistencyPanel'
 import Button from '@/components/shared/Button'
 import Spinner from '@/components/shared/Spinner'
 
@@ -49,6 +50,11 @@ export default function Stage2Page() {
 
       {/* 资产网格 */}
       <AssetGrid library={lib} onApprove={approveAsset} />
+
+      {/* 角色一致性面板 */}
+      {lib.characters.length > 0 && (
+        <CharacterConsistencyPanel />
+      )}
 
       {/* 下一步 */}
       <div className="flex justify-end pt-4 border-t border-[#2a2a3e]">

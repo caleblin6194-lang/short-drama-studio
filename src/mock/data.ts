@@ -46,9 +46,9 @@ export const DEMO_SCENES: SceneAsset[] = [
 ]
 
 export const DEMO_CHARACTERS: CharacterAsset[] = [
-  { id: 'c1', kind: 'character', name: '陈默', description: '28岁，曾经的天才少年，如今落魄入赘', tier: 'lead', age: '20s', gender: 'male', imageUrl: ph(300, 400, '陈默', '1a1a26', '00cec9'), status: 'ready', approvedByUser: false },
-  { id: 'c2', kind: 'character', name: '林婉清', description: '26岁，豪门千金，性格高傲但内心善良', tier: 'lead', age: '20s', gender: 'female', imageUrl: ph(300, 400, '林婉清', '1a1a26', 'fd79a8'), status: 'ready', approvedByUser: false },
-  { id: 'c3', kind: 'character', name: '林父', description: '55岁，林氏集团董事长，看不起女婿', tier: 'antagonist', age: 'middle-aged', gender: 'male', imageUrl: ph(300, 400, '林父', '1a1a26', 'ff6b6b'), status: 'ready', approvedByUser: false },
+  { id: 'c1', kind: 'character', name: '陈默', description: '28岁，曾经的天才少年，如今落魄入赘', tier: 'lead', age: '20s', gender: 'male', imageUrl: ph(300, 400, '陈默', '1a1a26', '00cec9'), status: 'ready', approvedByUser: false, isLocked: false },
+  { id: 'c2', kind: 'character', name: '林婉清', description: '26岁，豪门千金，性格高傲但内心善良', tier: 'lead', age: '20s', gender: 'female', imageUrl: ph(300, 400, '林婉清', '1a1a26', 'fd79a8'), status: 'ready', approvedByUser: false, isLocked: false },
+  { id: 'c3', kind: 'character', name: '林父', description: '55岁，林氏集团董事长，看不起女婿', tier: 'antagonist', age: 'middle-aged', gender: 'male', imageUrl: ph(300, 400, '林父', '1a1a26', 'ff6b6b'), status: 'ready', approvedByUser: false, isLocked: false },
 ]
 
 export const DEMO_PROPS: PropAsset[] = [

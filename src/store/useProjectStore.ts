@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import type { Project, TagSet, Shot, PipelineStage, Opening, RegionVariant, StoryBeatId, StoryStructurePlan, SubtitleStyle, Episode, EmotionalTone } from '@/types'
+import type { Project, TagSet, Shot, PipelineStage, Opening, RegionVariant, StoryBeatId, StoryStructurePlan, SubtitleStyle, Episode, EmotionalTone, CharacterAsset } from '@/types'
 import { inferConfig } from '@/lib/inferConfig'
 import { createStoryStructurePlan, formatStoryStructureToScript } from '@/lib/storyStructure'
 import { useProjectListStore } from './useProjectListStore'
@@ -41,6 +41,8 @@ interface ProjectStoreState {
   parseScript: () => Promise<void>
   approveAsset: (assetId: string) => void
   approveAllAssets: () => void
+  lockCharacter: (characterId: string) => void
+  unlockCharacter: (characterId: string) => void
 
   // Stage 3
   generateShots: () => Promise<void>
@@ -273,6 +275,38 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         characters: s.project.assetLibrary.characters.map(a => ({ ...a, approvedByUser: true })),
         props: s.project.assetLibrary.props.map(a => ({ ...a, approvedByUser: true })),
       }
+      return { project: { ...s.project, assetLibrary: lib } }
+    })
+    get().syncToList()
+  },
+
+  lockCharacter: (characterId: string) => {
+    set(s => {
+      if (!s.project) return s
+      const lib = { ...s.project.assetLibrary }
+      lib.characters = lib.characters.map(a => {
+        if (a.id !== characterId || a.kind !== 'character') return a
+        const char = a as CharacterAsset
+        return {
+          ...char,
+          isLocked: true,
+          lockedImageUrl: char.imageUrl,
+          approvedByUser: true,
+        }
+      })
+      return { project: { ...s.project, assetLibrary: lib } }
+    })
+    get().syncToList()
+  },
+
+  unlockCharacter: (characterId: string) => {
+    set(s => {
+      if (!s.project) return s
+      const lib = { ...s.project.assetLibrary }
+      lib.characters = lib.characters.map(a => {
+        if (a.id !== characterId || a.kind !== 'character') return a
+        return { ...a, isLocked: false }
+      })
       return { project: { ...s.project, assetLibrary: lib } }
     })
     get().syncToList()
