@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useProjectStore } from '@/store/useProjectStore'
 import VideoPlayer from '@/components/stage4/VideoPlayer'
 import SubtitleBGMPanel from '@/components/stage4/SubtitleBGMPanel'
@@ -7,16 +8,24 @@ import ExportPanel from '@/components/stage4/ExportPanel'
 import VariantList from '@/components/stage4/VariantList'
 import Button from '@/components/shared/Button'
 import Spinner from '@/components/shared/Spinner'
+import Tabs from '@/components/shared/Tabs'
+import TalkToEdit from '@/components/stage-chat/TalkToEdit'
 
 export default function Stage4Page() {
   const {
     project, renderMasterCut, isRendering,
     toggleSubtitles, toggleBgm, createVariant,
   } = useProjectStore()
+  const [activeTab, setActiveTab] = useState('settings')
 
   if (!project) return null
 
   const mc = project.masterCut
+
+  const tabs = [
+    { key: 'settings', label: '设置' },
+    { key: 'chat', label: '对话剪辑' },
+  ]
 
   return (
     <div className="space-y-6">
@@ -39,20 +48,29 @@ export default function Stage4Page() {
       )}
 
       {/* 主体布局：左侧播放器 + 右侧控制面板 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
         <VideoPlayer masterCut={mc} />
 
         <div className="space-y-4">
           {mc && (
             <>
-              <SubtitleBGMPanel
-                subtitlesEnabled={mc.subtitlesEnabled}
-                bgmEnabled={mc.bgmEnabled}
-                bgmTrack={mc.bgmTrack}
-                onToggleSubtitles={toggleSubtitles}
-                onToggleBgm={toggleBgm}
-              />
-              <ExportPanel />
+              {/* Tab 切换 */}
+              <Tabs items={tabs} activeKey={activeTab} onChange={setActiveTab} />
+
+              {activeTab === 'settings' ? (
+                <>
+                  <SubtitleBGMPanel
+                    subtitlesEnabled={mc.subtitlesEnabled}
+                    bgmEnabled={mc.bgmEnabled}
+                    bgmTrack={mc.bgmTrack}
+                    onToggleSubtitles={toggleSubtitles}
+                    onToggleBgm={toggleBgm}
+                  />
+                  <ExportPanel />
+                </>
+              ) : (
+                <TalkToEdit projectId={project.id} />
+              )}
             </>
           )}
         </div>
