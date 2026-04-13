@@ -26,6 +26,7 @@ export function createEmptyProject(overrides?: Partial<Project>): Project {
     inferredConfig: inferConfig(tagSet),
     script: { id: uuid(), rawText: '', estimatedDurationSec: 0, characterCount: 0, wordLimit: 10000, history: [] },
     assetLibrary: { scenes: [], characters: [], props: [] },
+    episodes: [],
     shots: [],
     masterCut: null,
     variants: [],
@@ -168,6 +169,10 @@ export function createInitialProjects(): Project[] {
       lastEnteredStage: 4,
       script: { id: 'sc1', rawText: DEMO_SCRIPT, estimatedDurationSec: 75, characterCount: DEMO_SCRIPT.length, wordLimit: 10000, history: [] },
       assetLibrary: { scenes: DEMO_SCENES, characters: DEMO_CHARACTERS, props: DEMO_PROPS },
+      episodes: [
+        { id: 'ep1', number: 1, title: '第1集', emotionalTone: 'setup', shots: createDemoShots(5).map((s, i) => ({ ...s, order: i })), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 'ep2', number: 2, title: '第2集', emotionalTone: 'climax', shots: createDemoShots(6).map((s, i) => ({ ...s, order: i })), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      ],
       shots: createDemoShots(11),
       masterCut: { id: 'mc1', projectId: 'demo-1', subtitlesEnabled: true, subtitleStyle: { animation: 'fade', position: 'bottom', fontSize: 'md', fontColor: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', backgroundEnabled: true }, bgmEnabled: true, bgmTrack: 'epic_tension', renderedUrl: '#', durationSec: 77 },
       costSpent: 420,

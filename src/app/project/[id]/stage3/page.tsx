@@ -6,9 +6,11 @@ import { useProjectStore } from '@/store/useProjectStore'
 import ShotCard from '@/components/stage3/ShotCard'
 import Timeline from '@/components/stage3/Timeline'
 import TalkingAvatarPanel from '@/components/stage3/TalkingAvatarPanel'
+import EpisodePanel from '@/components/stage3/EpisodePanel'
 import Button from '@/components/shared/Button'
 import Spinner from '@/components/shared/Spinner'
 import ProgressBar from '@/components/shared/ProgressBar'
+import Tabs from '@/components/shared/Tabs'
 
 export default function Stage3Page() {
   const {
@@ -16,10 +18,12 @@ export default function Stage3Page() {
     reshootShot, updateShotDialogue, setStage,
   } = useProjectStore()
   const router = useRouter()
+  const [activeTab, setActiveTab] = useState('episodes')
 
   if (!project) return null
 
   const shots = project.shots
+  const episodes = project.episodes
   const totalPipelines = shots.length * 3
   const donePipelines = shots.reduce((sum, s) => {
     return sum + (s.pipeline.image.status === 'done' ? 1 : 0) + (s.pipeline.video.status === 'done' ? 1 : 0) + (s.pipeline.audio.status === 'done' ? 1 : 0)
@@ -57,24 +61,47 @@ export default function Stage3Page() {
         <ProgressBar value={progress} label={`拍摄进度 (${donePipelines}/${totalPipelines})`} />
       )}
 
+      {shots.length > 0 && (
+        <>
+          {/* Tab 切换：剧集 vs 镜头 */}
+          <Tabs
+            items={[
+              { key: 'episodes', label: '剧集', count: episodes.length },
+              { key: 'shots', label: '全部镜头' },
+            ]}
+            activeKey={activeTab}
+            onChange={setActiveTab}
+          />
+
+          {activeTab === 'episodes' ? (
+            <>
+              {/* 剧集面板 */}
+              <EpisodePanel />
+
+              {/* 时间线 */}
+              <Timeline shots={shots} />
+            </>
+          ) : (
+            <>
+              {/* 全部镜头列表 */}
+              <div className="space-y-3">
+                {shots.map((shot, i) => (
+                  <ShotCard
+                    key={shot.id}
+                    shot={shot}
+                    index={i}
+                    onReshoot={reshootShot}
+                    onDialogueChange={updateShotDialogue}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
       {/* AI 说话数字人 */}
       <TalkingAvatarPanel />
-
-      {/* 时间线 */}
-      <Timeline shots={shots} />
-
-      {/* 镜头列表 */}
-      <div className="space-y-3">
-        {shots.map((shot, i) => (
-          <ShotCard
-            key={shot.id}
-            shot={shot}
-            index={i}
-            onReshoot={reshootShot}
-            onDialogueChange={updateShotDialogue}
-          />
-        ))}
-      </div>
 
       {/* 下一步 */}
       <div className="flex justify-end pt-4 border-t border-[#2a2a3e]">

@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import type { Project, TagSet, Shot, PipelineStage, Opening, RegionVariant, StoryBeatId, StoryStructurePlan, SubtitleStyle } from '@/types'
+import type { Project, TagSet, Shot, PipelineStage, Opening, RegionVariant, StoryBeatId, StoryStructurePlan, SubtitleStyle, Episode, EmotionalTone } from '@/types'
 import { inferConfig } from '@/lib/inferConfig'
 import { createStoryStructurePlan, formatStoryStructureToScript } from '@/lib/storyStructure'
 import { useProjectListStore } from './useProjectListStore'
@@ -44,6 +44,10 @@ interface ProjectStoreState {
 
   // Stage 3
   generateShots: () => Promise<void>
+  addEpisode: () => void
+  removeEpisode: (episodeId: string) => void
+  updateEpisode: (episodeId: string, patch: Partial<Episode>) => void
+  moveShotToEpisode: (shotId: string, fromEpisodeId: string, toEpisodeId: string, newOrder: number) => void
   startShoot: () => void
   reshootShot: (shotId: string, instruction: string) => Promise<void>
   updateShotDialogue: (shotId: string, dialogue: string) => void
@@ -283,11 +287,83 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     set({ isGeneratingShots: true })
     const count = p?.inferredConfig.recommendedShotCount ?? 10
     const shots = await gen.generateShots(p?.script.rawText ?? '', count)
+    // Group shots into episodes (5 shots per episode default)
+    const shotsPerEpisode = 5
+    const episodes: Episode[] = []
+    for (let i = 0; i < shots.length; i += shotsPerEpisode) {
+      const episodeShots = shots.slice(i, i + shotsPerEpisode)
+      const episodeNum = Math.floor(i / shotsPerEpisode) + 1
+      episodes.push({
+        id: uuid(),
+        number: episodeNum,
+        title: `第${episodeNum}集`,
+        emotionalTone: episodeNum === 1 ? 'setup' : episodeNum === Math.ceil(shots.length / shotsPerEpisode) ? 'cliffhanger' : 'conflict',
+        shots: episodeShots,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+    }
     set(s => {
       if (!s.project) return { isGeneratingShots: false }
-      return { isGeneratingShots: false, project: { ...s.project, shots, status: 'shooting' } }
+      return { isGeneratingShots: false, project: { ...s.project, shots, episodes, status: 'shooting' } }
     })
     get().syncToList()
+  },
+
+  addEpisode: () => {
+    set(s => {
+      if (!s.project) return s
+      const eps = s.project.episodes
+      const newEp: Episode = {
+        id: uuid(),
+        number: eps.length + 1,
+        title: `第${eps.length + 1}集`,
+        emotionalTone: 'setup',
+        shots: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      return { project: { ...s.project, episodes: [...eps, newEp] } }
+    })
+  },
+
+  removeEpisode: (episodeId) => {
+    set(s => {
+      if (!s.project) return s
+      const episodes = s.project.episodes.filter(e => e.id !== episodeId)
+        .map((e, i) => ({ ...e, number: i + 1, title: `第${i + 1}集` }))
+      return { project: { ...s.project, episodes } }
+    })
+  },
+
+  updateEpisode: (episodeId, patch) => {
+    set(s => {
+      if (!s.project) return s
+      const episodes = s.project.episodes.map(e =>
+        e.id === episodeId ? { ...e, ...patch, updatedAt: new Date().toISOString() } : e,
+      )
+      return { project: { ...s.project, episodes } }
+    })
+  },
+
+  moveShotToEpisode: (shotId, fromEpisodeId, toEpisodeId, newOrder) => {
+    set(s => {
+      if (!s.project) return s
+      const episodes = s.project.episodes.map(ep => {
+        if (ep.id === fromEpisodeId) {
+          return { ...ep, shots: ep.shots.filter(sh => sh.id !== shotId), updatedAt: new Date().toISOString() }
+        }
+        if (ep.id === toEpisodeId) {
+          const shot = s.project!.shots.find(sh => sh.id === shotId)
+          if (!shot) return ep
+          const newShots = [...ep.shots]
+          newShots.splice(newOrder, 0, shot)
+          return { ...ep, shots: newShots.map((sh, i) => ({ ...sh, order: i })), updatedAt: new Date().toISOString() }
+        }
+        return ep
+      })
+      return { project: { ...s.project, episodes } }
+    })
   },
 
   startShoot: () => {

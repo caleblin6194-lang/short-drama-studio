@@ -135,6 +135,19 @@ export interface Shot {
   finalClipUrl?: string
 }
 
+// ===== Episode =====
+export type EmotionalTone = 'setup' | 'conflict' | 'climax' | 'resolution' | 'cliffhanger'
+
+export interface Episode {
+  id: string
+  number: number
+  title: string
+  emotionalTone: EmotionalTone
+  shots: Shot[]
+  createdAt: string
+  updatedAt: string
+}
+
 // ===== Subtitle Style =====
 export type SubtitleAnimation = 'none' | 'fade' | 'typewriter' | 'bounce' | 'karaoke' | 'slide'
 export type SubtitlePosition = 'bottom' | 'top' | 'center'
@@ -452,6 +465,7 @@ export interface Project {
   inferredConfig: InferredConfig
   script: Script
   assetLibrary: AssetLibrary
+  episodes: Episode[]
   shots: Shot[]
   masterCut: MasterCut | null
   variants: RegionVariant[]
