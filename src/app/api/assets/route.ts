@@ -1,152 +1,145 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getSupabase, hasSupabaseConfig } from '@/lib/supabase'
 import { v4 as uuidv4 } from 'uuid'
-import type { AssetLibrary, SceneAsset, CharacterAsset, PropAsset, AssetStatus } from '@/types'
+import type { AssetLibrary, AssetStatus } from '@/types'
 
-// In-memory store for demo (replace with DB in production)
-const assetLibraries: Record<string, AssetLibrary> = {}
+// Middleware: require Supabase config
+function withAuth(handler: (req: NextRequest, supabase: any) => Promise<NextResponse>) {
+  return async (req: NextRequest) => {
+    if (!hasSupabaseConfig()) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
+    }
+    return handler(req, getSupabase())
+  }
+}
 
-export async function GET(request: NextRequest) {
+// GET /api/assets?projectId=xxx&userId=xxx
+export const GET = withAuth(async (request: NextRequest, supabase: any) => {
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get('projectId')
+  const userId = searchParams.get('userId')
 
-  if (!projectId) {
-    return NextResponse.json({ error: 'projectId required' }, { status: 400 })
+  if (!projectId) return NextResponse.json({ error: 'projectId required' }, { status: 400 })
+  if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 401 })
+
+  const { data: project } = await supabase
+    .from('projects').select('user_id').eq('id', projectId).single()
+
+  if (!project || project.user_id !== userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
 
-  const library = assetLibraries[projectId] || { scenes: [], characters: [], props: [] }
+  const { data: assets, error } = await supabase
+    .from('assets').select('*').eq('project_id', projectId).order('created_at', { ascending: true })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const library: AssetLibrary = {
+    scenes: (assets || []).filter((a: any) => a.kind === 'scene').map(mapAsset),
+    characters: (assets || []).filter((a: any) => a.kind === 'character').map(mapAsset),
+    props: (assets || []).filter((a: any) => a.kind === 'prop').map(mapAsset),
+  }
 
   return NextResponse.json(library)
-}
+})
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { projectId, assetType, data } = body
+// POST /api/assets
+export const POST = withAuth(async (request: NextRequest, supabase: any) => {
+  const body = await request.json()
+  const { projectId, assetType, data, userId } = body
 
-    if (!projectId || !assetType) {
-      return NextResponse.json({ error: 'projectId and assetType required' }, { status: 400 })
-    }
-
-    // Initialize library if not exists
-    if (!assetLibraries[projectId]) {
-      assetLibraries[projectId] = { scenes: [], characters: [], props: [] }
-    }
-
-    const library = assetLibraries[projectId]
-
-    if (assetType === 'scene') {
-      const scene: SceneAsset = {
-        id: uuidv4(),
-        name: data.name || '新场景',
-        description: data.description || '',
-        imageUrl: data.imageUrl,
-        status: (data.status as AssetStatus) || 'ready',
-        approvedByUser: false,
-        timeOfDay: data.timeOfDay,
-        mood: data.mood,
-        kind: 'scene',
-      }
-      library.scenes.push(scene)
-      return NextResponse.json(scene)
-    }
-
-    if (assetType === 'character') {
-      const character: CharacterAsset = {
-        id: uuidv4(),
-        name: data.name || '新角色',
-        description: data.description || '',
-        imageUrl: data.imageUrl,
-        status: (data.status as AssetStatus) || 'ready',
-        approvedByUser: false,
-        tier: data.tier || 'support',
-        age: data.age,
-        gender: data.gender,
-        kind: 'character',
-      }
-      library.characters.push(character)
-      return NextResponse.json(character)
-    }
-
-    if (assetType === 'prop') {
-      const prop: PropAsset = {
-        id: uuidv4(),
-        name: data.name || '新道具',
-        description: data.description || '',
-        imageUrl: data.imageUrl,
-        status: (data.status as AssetStatus) || 'ready',
-        approvedByUser: false,
-        kind: 'prop',
-      }
-      library.props.push(prop)
-      return NextResponse.json(prop)
-    }
-
-    return NextResponse.json({ error: 'Invalid assetType' }, { status: 400 })
-  } catch (error) {
-    console.error('Assets error:', error)
-    return NextResponse.json({ error: 'Operation failed' }, { status: 500 })
+  if (!projectId || !assetType || !userId) {
+    return NextResponse.json({ error: 'projectId, assetType, userId required' }, { status: 400 })
   }
-}
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { projectId, assetType, assetId, updates } = body
+  const { data: project } = await supabase
+    .from('projects').select('user_id').eq('id', projectId).single()
 
-    if (!projectId || !assetType || !assetId) {
-      return NextResponse.json({ error: 'projectId, assetType, and assetId required' }, { status: 400 })
-    }
-
-    const library = assetLibraries[projectId]
-    if (!library) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-    }
-
-    let assetList: any[] = []
-    if (assetType === 'scene') assetList = library.scenes
-    else if (assetType === 'character') assetList = library.characters
-    else if (assetType === 'prop') assetList = library.props
-    else return NextResponse.json({ error: 'Invalid assetType' }, { status: 400 })
-
-    const asset = assetList.find((a) => a.id === assetId)
-    if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
-    }
-
-    Object.assign(asset, updates)
-    return NextResponse.json(asset)
-  } catch (error) {
-    console.error('Assets PATCH error:', error)
-    return NextResponse.json({ error: 'Update failed' }, { status: 500 })
+  if (!project || project.user_id !== userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
-}
 
-export async function DELETE(request: NextRequest) {
+  const assetData: any = {
+    id: uuidv4(), project_id: projectId, kind: assetType,
+    name: data.name || `新${assetType === 'scene' ? '场景' : assetType === 'character' ? '角色' : '道具'}`,
+    description: data.description || '', image_url: data.imageUrl || null,
+    public_id: data.publicId || null, status: data.status || 'ready',
+    approved_by_user: false,
+    metadata: {
+      timeOfDay: data.timeOfDay, mood: data.mood,
+      tier: data.tier, age: data.age, gender: data.gender,
+    },
+  }
+
+  const { data: asset, error } = await supabase
+    .from('assets').insert(assetData).select().single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(asset)
+})
+
+// PATCH /api/assets
+export const PATCH = withAuth(async (request: NextRequest, supabase: any) => {
+  const body = await request.json()
+  const { projectId, assetId, updates, userId } = body
+
+  if (!projectId || !assetId || !userId) {
+    return NextResponse.json({ error: 'projectId, assetId, userId required' }, { status: 400 })
+  }
+
+  const { data: project } = await supabase
+    .from('projects').select('user_id').eq('id', projectId).single()
+
+  if (!project || project.user_id !== userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  }
+
+  const updateData: any = {}
+  if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl
+  if (updates.status !== undefined) updateData.status = updates.status
+  if (updates.approvedByUser !== undefined) updateData.approved_by_user = updates.approvedByUser
+  if (updates.name !== undefined) updateData.name = updates.name
+  if (updates.publicId !== undefined) updateData.public_id = updates.publicId
+  if (updates.metadata !== undefined) updateData.metadata = updates.metadata
+
+  const { data: asset, error } = await supabase
+    .from('assets').update(updateData).eq('id', assetId).eq('project_id', projectId).select().single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+  return NextResponse.json(asset)
+})
+
+// DELETE /api/assets?projectId=xxx&assetId=xxx&userId=xxx
+export const DELETE = withAuth(async (request: NextRequest, supabase: any) => {
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get('projectId')
-  const assetType = searchParams.get('assetType')
   const assetId = searchParams.get('assetId')
+  const userId = searchParams.get('userId')
 
-  if (!projectId || !assetType || !assetId) {
-    return NextResponse.json({ error: 'projectId, assetType, and assetId required' }, { status: 400 })
+  if (!projectId || !assetId || !userId) {
+    return NextResponse.json({ error: 'projectId, assetId, userId required' }, { status: 400 })
   }
 
-  const library = assetLibraries[projectId]
-  if (!library) {
-    return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+  const { data: project } = await supabase
+    .from('projects').select('user_id').eq('id', projectId).single()
+
+  if (!project || project.user_id !== userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
 
-  let assetList: any[] = []
-  if (assetType === 'scene') assetList = library.scenes
-  else if (assetType === 'character') assetList = library.characters
-  else if (assetType === 'prop') assetList = library.props
-  else return NextResponse.json({ error: 'Invalid assetType' }, { status: 400 })
+  const { error } = await supabase
+    .from('assets').delete().eq('id', assetId).eq('project_id', projectId)
 
-  const index = assetList.findIndex((a) => a.id === assetId)
-  if (index === -1) {
-    return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
-  }
-
-  assetList.splice(index, 1)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
+})
+
+function mapAsset(a: any) {
+  return {
+    id: a.id, name: a.name, description: a.description,
+    imageUrl: a.image_url, status: a.status as AssetStatus,
+    approvedByUser: a.approved_by_user, kind: a.kind,
+    ...(a.metadata || {}),
+  }
 }
