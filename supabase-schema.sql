@@ -88,7 +88,31 @@ $$ language plpgsql;
 create trigger projects_updated_at before update on public.projects
   for each row execute procedure public.handle_updated_at();
 
+-- 会员订阅表
+create table if not exists public.memberships (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.users(id) on delete cascade not null unique,
+  plan_tier text not null default 'free' check (plan_tier in ('free', 'creator', 'studio', 'flagship')),
+  status text not null default 'active' check (status in ('active', 'expired', 'cancelled', 'past_due')),
+  monthly_credits_remaining integer not null default 2000,
+  total_credits integer not null default 2000,
+  renewal_date date,
+  auto_renew boolean not null default false,
+  renewal_history jsonb not null default '[]',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- 会员表 RLS
+alter table public.memberships enable row level security;
+create policy "Users can manage own membership" on public.memberships for all using (auth.uid() = user_id);
+
 -- 索引
 create index if not exists idx_projects_user_id on public.projects(user_id);
 create index if not exists idx_assets_project_id on public.assets(project_id);
 create index if not exists idx_credit_transactions_user_id on public.credit_transactions(user_id);
+create index if not exists idx_memberships_user_id on public.memberships(user_id);
+
+-- memberships 自动更新时间戳
+create trigger memberships_updated_at before update on public.memberships
+  for each row execute procedure public.handle_updated_at();

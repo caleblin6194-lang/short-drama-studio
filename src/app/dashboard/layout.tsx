@@ -14,8 +14,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (currentUser) {
-      loadCredits(currentUser.id)
-      loadSub(currentUser.id)
+      loadCredits()
+      loadSub()
     }
   }, [currentUser, loadCredits, loadSub])
 

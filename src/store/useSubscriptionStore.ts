@@ -4,19 +4,22 @@ import { create } from 'zustand'
 import type { Subscription, PlanConfig, PlanTier } from '@/types'
 import { PLANS } from '@/lib/plans'
 import { MOCK_SUBSCRIPTION } from '@/mock/dashboard'
-import { delay } from '@/mock/delays'
-import { v4 as uuid } from 'uuid'
+import { useAuthStore } from './useAuthStore'
 
 interface SubscriptionState {
   subscription: Subscription | null
   plans: PlanConfig[]
   isProcessing: boolean
 
-  loadForUser: (userId: string) => void
+  loadForUser: () => void
   upgradePlan: (tier: PlanTier) => Promise<void>
   downgradePlan: (tier: PlanTier) => Promise<void>
   toggleAutoRenew: () => void
   cancelSubscription: () => Promise<void>
+}
+
+function getToken() {
+  return useAuthStore.getState().accessToken
 }
 
 export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
@@ -24,13 +27,52 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
   plans: PLANS,
   isProcessing: false,
 
-  loadForUser: () => {
-    set({ subscription: { ...MOCK_SUBSCRIPTION } })
+  loadForUser: async () => {
+    const token = getToken()
+    if (!token) {
+      set({ subscription: { ...MOCK_SUBSCRIPTION } })
+      return
+    }
+    try {
+      const res = await fetch('/api/membership/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        set({ subscription: data.membership })
+      } else {
+        set({ subscription: { ...MOCK_SUBSCRIPTION } })
+      }
+    } catch {
+      set({ subscription: { ...MOCK_SUBSCRIPTION } })
+    }
   },
 
   upgradePlan: async (tier) => {
     set({ isProcessing: true })
-    await delay(1500)
+    const token = getToken()
+    try {
+      const res = await fetch('/api/membership/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ planTier: tier }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        set(s => ({
+          isProcessing: false,
+          subscription: s.subscription
+            ? { ...s.subscription, planTier: tier, status: 'active', totalCredits: data.membership.totalCredits }
+            : null,
+        }))
+        return
+      }
+    } catch { /* fall through to mock */ }
+    // Fallback mock
+    await new Promise(r => setTimeout(r, 1500))
     const plan = PLANS.find(p => p.tier === tier)!
     set(s => ({
       isProcessing: false,
@@ -40,7 +82,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         status: 'active',
         renewalHistory: [
           ...s.subscription.renewalHistory,
-          { id: uuid(), date: new Date().toISOString().split('T')[0], amount: plan.monthlyPrice, planTier: tier, method: 'manual' as const },
+          { id: `rh-${Date.now()}`, date: new Date().toISOString().split('T')[0], amount: plan.monthlyPrice, planTier: tier, method: 'manual' as const },
         ],
       } : null,
     }))
@@ -48,7 +90,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
 
   downgradePlan: async (tier) => {
     set({ isProcessing: true })
-    await delay(1500)
+    await new Promise(r => setTimeout(r, 1500))
     set(s => ({
       isProcessing: false,
       subscription: s.subscription ? { ...s.subscription, planTier: tier } : null,
@@ -63,7 +105,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
 
   cancelSubscription: async () => {
     set({ isProcessing: true })
-    await delay(1000)
+    await new Promise(r => setTimeout(r, 1000))
     set(s => ({
       isProcessing: false,
       subscription: s.subscription ? { ...s.subscription, status: 'cancelled', autoRenew: false } : null,
