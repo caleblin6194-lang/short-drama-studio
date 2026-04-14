@@ -6,6 +6,7 @@ import { inferConfig } from '@/lib/inferConfig'
 import { createStoryStructurePlan, formatStoryStructureToScript } from '@/lib/storyStructure'
 import { useProjectListStore } from './useProjectListStore'
 import { useCreditsStore } from './useCreditsStore'
+import { useAuthStore } from './useAuthStore'
 import { getCreditCost } from '@/lib/creditCosts'
 import * as gen from '@/mock/generators'
 import { v4 as uuid } from 'uuid'
@@ -522,29 +523,60 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   createVariant: async (regionTag) => {
     const p = get().project
     if (!p) return
-    const cost = getCreditCost('create_variant', 'cost_first')
-    const ok = useCreditsStore.getState().consumeCredits(cost, p.id, p.title, '创建地域变体')
-    if (!ok) { alert('积分不足，无法创建变体'); return }
+    const token = useAuthStore.getState().accessToken
+    if (!token) { alert('请先登录'); return }
+
     const variant: RegionVariant = {
       id: uuid(),
       parentProjectId: p.id,
       region: regionTag as any,
       status: 'pending',
-      estimatedCost: 50,
+      estimatedCost: 510,
     }
+
+    // Optimistic update
     set(s => {
       if (!s.project) return s
       return { project: { ...s.project, variants: [...s.project.variants, variant] } }
     })
-    await gen.createRegionVariant((status) => {
+
+    try {
+      const res = await fetch('/api/variants', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ projectId: p.id, region: regionTag }),
+      })
+
+      if (res.ok) {
+        const { variant: savedVariant } = await res.json()
+        set(s => {
+          if (!s.project) return s
+          return {
+            project: {
+              ...s.project,
+              variants: s.project.variants.map(v => v.id === variant.id ? savedVariant : v),
+            },
+          }
+        })
+      } else {
+        const err = await res.json()
+        alert(err.error || '创建变体失败')
+        // Rollback
+        set(s => {
+          if (!s.project) return s
+          return { project: { ...s.project, variants: s.project.variants.filter(v => v.id !== variant.id) } }
+        })
+      }
+    } catch {
+      alert('网络错误')
       set(s => {
         if (!s.project) return s
-        const variants = s.project.variants.map(v =>
-          v.id === variant.id ? { ...v, status: status as any } : v,
-        )
-        return { project: { ...s.project, variants } }
+        return { project: { ...s.project, variants: s.project.variants.filter(v => v.id !== variant.id) } }
       })
-    })
+    }
     get().syncToList()
   },
 
