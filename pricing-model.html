@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>短剧创作工具 v2.0 — 计费方案与模型接入方案</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;
+  --bg-card:#12121a;
+  --bg-code:#0d0d14;
+  --border:#1e1e2e;
+  --border-light:#2a2a3e;
+  --text:#e0e0e8;
+  --text-dim:#8888a0;
+  --text-muted:#5a5a72;
+  --accent:#6c5ce7;
+  --accent-light:#a29bfe;
+  --green:#00cec9;
+  --green-dim:#00b89420;
+  --orange:#fdcb6e;
+  --orange-dim:#fdcb6e20;
+  --red:#ff6b6b;
+  --red-dim:#ff6b6b20;
+  --blue:#74b9ff;
+  --blue-dim:#74b9ff20;
+  --pink:#fd79a8;
+  --pink-dim:#fd79a820;
+  --radius:12px;
+  --radius-sm:8px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --font-mono:'SF Mono','Fira Code','Cascadia Code',monospace;
+  --font-sans:-apple-system,'SF Pro Display','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  --max-w:1100px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--text);line-height:1.75;-webkit-font-smoothing:antialiased}
+::selection{background:var(--accent);color:#fff}
+a{color:var(--accent-light);text-decoration:none;transition:color .2s}
+a:hover{color:#fff}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:3px}
+
+.page{max-width:var(--max-w);margin:0 auto;padding:40px 24px 120px}
+
+/* Hero */
+.hero{text-align:center;padding:60px 0 48px;position:relative}
+.hero::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:500px;height:500px;background:radial-gradient(circle,rgba(0,206,201,.12) 0%,transparent 70%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;background:var(--green);color:#000;font-size:12px;font-weight:700;border-radius:999px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:20px}
+.hero h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;line-height:1.2;background:linear-gradient(135deg,#fff 30%,var(--green) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px}
+.hero p{font-size:1rem;color:var(--text-dim);max-width:700px;margin:0 auto}
+.hero-meta{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-top:20px;font-size:.82rem;color:var(--text-muted)}
+
+/* Back link */
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;color:var(--text-muted);margin-bottom:20px;transition:color .2s}
+.back-link:hover{color:var(--accent-light)}
+
+/* Sections */
+.section{margin-bottom:56px}
+.section h2{font-size:1.4rem;font-weight:800;padding-bottom:10px;border-bottom:2px solid var(--border);margin-bottom:24px;display:flex;align-items:center;gap:10px}
+.section h2 .icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;font-size:1rem;flex-shrink:0}
+.section h3{font-size:1.1rem;font-weight:700;margin:28px 0 10px;color:var(--accent-light)}
+.section h4{font-size:.95rem;font-weight:600;margin:18px 0 8px;color:var(--text)}
+
+/* Tables */
+.table-wrap{overflow-x:auto;margin:14px 0;border-radius:var(--radius);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+thead{background:var(--bg-card)}
+th{text-align:left;padding:11px 14px;font-weight:600;color:var(--accent-light);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--text-dim);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(108,92,231,.04)}
+td:first-child{color:var(--text);font-weight:500}
+
+/* Pills */
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:600;margin:1px 3px 1px 0;white-space:nowrap}
+.pill.green{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,206,201,.25)}
+.pill.blue{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(116,185,255,.25)}
+.pill.purple{background:rgba(108,92,231,.15);color:var(--accent-light);border:1px solid rgba(108,92,231,.25)}
+.pill.orange{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(253,203,110,.25)}
+.pill.red{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,107,107,.25)}
+.pill.pink{background:var(--pink-dim);color:var(--pink);border:1px solid rgba(253,121,168,.25)}
+.pill.gray{background:rgba(90,90,114,.15);color:var(--text-muted);border:1px solid rgba(90,90,114,.25)}
+
+/* Cards */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;transition:border-color .2s}
+.card:hover{border-color:var(--border-light)}
+.card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-weight:700;font-size:.95rem}
+.card-header .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Highlight */
+.highlight{border-radius:var(--radius);padding:18px 22px;margin:14px 0;font-size:.9rem;line-height:1.7}
+.highlight.green{background:var(--green-dim);border-left:3px solid var(--green)}
+.highlight.purple{background:rgba(108,92,231,.1);border-left:3px solid var(--accent)}
+.highlight.orange{background:var(--orange-dim);border-left:3px solid var(--orange)}
+.highlight.red{background:var(--red-dim);border-left:3px solid var(--red)}
+.highlight.blue{background:var(--blue-dim);border-left:3px solid var(--blue)}
+.highlight.pink{background:var(--pink-dim);border-left:3px solid var(--pink)}
+.highlight strong{color:#fff}
+
+/* Metric Grid */
+.metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin:14px 0}
+.metric{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;text-align:center}
+.metric .val{font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:2px}
+.metric .label{font-size:.72rem;color:var(--text-muted)}
+
+/* Code */
+pre{background:var(--bg-code);border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px;font-family:var(--font-mono);font-size:.78rem;line-height:1.6;color:var(--text-dim);margin:14px 0;max-width:100%;white-space:pre-wrap;word-wrap:break-word;overflow-x:auto}
+code{font-family:var(--font-mono);font-size:.83em;background:rgba(108,92,231,.12);padding:2px 6px;border-radius:4px;color:var(--accent-light)}
+pre code{background:none;padding:0;color:inherit;font-size:inherit}
+
+/* Grid layouts */
+.grid-2{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin:14px 0}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin:14px 0}
+.grid-4{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:14px 0}
+
+/* Comparison row */
+.vs-row{display:flex;align-items:stretch;gap:12px;margin:14px 0}
+.vs-row .vs-card{flex:1;min-width:0}
+@media(max-width:640px){.vs-row{flex-direction:column}}
+
+/* Lists */
+ul,ol{padding-left:20px;margin:6px 0}
+li{margin-bottom:4px;color:var(--text-dim)}
+li strong{color:var(--text)}
+li::marker{color:var(--accent)}
+
+/* Recommended badge */
+.rec{position:relative}
+.rec::after{content:'推荐';position:absolute;top:-6px;right:-6px;background:var(--green);color:#000;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:999px}
+
+/* Source footer */
+.sources{margin-top:48px;padding-top:24px;border-top:1px solid var(--border)}
+.sources h3{font-size:.95rem;color:var(--text-muted);margin-bottom:12px}
+.sources a{font-size:.8rem;display:block;margin-bottom:4px;color:var(--text-muted)}
+.sources a:hover{color:var(--accent-light)}
+
+/* TOC */
+.toc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;margin-bottom:48px}
+.toc h2{font-size:1rem;font-weight:700;margin-bottom:14px;color:var(--accent-light);border:none;padding:0}
+.toc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:4px 28px}
+.toc a{display:block;padding:4px 0;font-size:.85rem;color:var(--text-dim);transition:color .15s,padding-left .15s}
+.toc a:hover{color:var(--accent-light);padding-left:6px}
+.toc a .n{color:var(--text-muted);font-family:var(--font-mono);font-size:.78rem;margin-right:6px}
+
+/* Responsive */
+@media(max-width:640px){
+  .page{padding:24px 16px 80px}
+  .hero{padding:40px 0 32px}
+  .metrics{grid-template-columns:1fr 1fr}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  table{font-size:.78rem}
+  th,td{padding:7px 10px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<a class="back-link" href="index.html">← 返回 PRD 主文档</a>
+
+<!-- Hero -->
+<header class="hero">
+  <div class="hero-badge">💰 计费方案与模型接入 · 2026.04</div>
+  <h1>短剧创作工具 v2.0<br>计费方案与模型接入方案</h1>
+  <p>基于全网 12+ 竞品定价调研和 25+ 模型 API 价格对比，制定我们自己的计费体系和模型路由策略。</p>
+  <div class="hero-meta">
+    <span>📊 竞品调研数据截至 2026.04</span>
+    <span>🔌 覆盖图像/视频/LLM/TTS/音乐 5 大类</span>
+    <span>💡 含推荐模型组合和成本测算</span>
+  </div>
+</header>
+
+<!-- TOC -->
+<nav class="toc">
+  <h2>📑 目录</h2>
+  <div class="toc-grid">
+    <a href="#s1"><span class="n">1</span>竞品计费模式调研</a>
+    <a href="#s2"><span class="n">2</span>模型接入方案：图像生成</a>
+    <a href="#s3"><span class="n">3</span>模型接入方案：视频生成</a>
+    <a href="#s4"><span class="n">4</span>模型接入方案：LLM 大语言模型</a>
+    <a href="#s5"><span class="n">5</span>模型接入方案：TTS 配音</a>
+    <a href="#s6"><span class="n">6</span>模型接入方案：音乐生成</a>
+    <a href="#s7"><span class="n">7</span>推荐模型组合与路由策略</a>
+    <a href="#s8"><span class="n">8</span>单集成本测算</a>
+    <a href="#s9"><span class="n">9</span>我们的计费方案设计</a>
+    <a href="#s10"><span class="n">10</span>积分定价详细规则</a>
+    <a href="#s11"><span class="n">11</span>风险与成本优化</a>
+  </div>
+</nav>
+
+<!-- ===== 1. 竞品计费模式调研 ===== -->
+<section class="section" id="s1">
+  <h2><span class="icon" style="background:var(--accent);color:#fff">1</span> 竞品计费模式调研</h2>
+
+  <h3>1.1 国内竞品</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>产品</th><th>计费模式</th><th>价格档位</th><th>单次生成成本</th><th>API</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>纳米AI短剧</strong><br><span class="pill gray">360 出品</span></td>
+          <td>B2B Token 消耗制</td>
+          <td>按模型调用量计费<br>企业 API 最低起步 1000 万元</td>
+          <td>视频约 <strong>¥1/秒</strong>（Seedance 2.0）<br>纯生成 46 元/百万 token</td>
+          <td><span class="pill red">仅企业</span></td>
+        </tr>
+        <tr>
+          <td><strong>即梦AI</strong><br><span class="pill blue">字节跳动</span></td>
+          <td>免费积分 + 会员订阅</td>
+          <td>免费：每日 60-100 积分<br>标准会员：¥239/月<br>高级会员：¥649/月</td>
+          <td>图片 <strong>¥0.2/张</strong><br>视频 <strong>¥0.25-1/秒</strong></td>
+          <td><span class="pill green">开放</span><br>火山引擎</td>
+        </tr>
+        <tr>
+          <td><strong>可灵AI</strong><br><span class="pill blue">快手</span></td>
+          <td>会员积分制</td>
+          <td>黄金：¥66/月（首月¥19）→ 660 灵感值<br>铂金：¥266/月（首月¥79）→ 3000 灵感值<br>钻石：¥666/月（首月¥199）→ 8000 灵感值</td>
+          <td>图片 <strong>0.2 灵感值/张</strong><br>标准视频 <strong>10 灵感值/条</strong></td>
+          <td><span class="pill green">开放</span><br>$0.14/s 标准</td>
+        </tr>
+        <tr>
+          <td><strong>Vidu</strong><br><span class="pill blue">生数科技</span></td>
+          <td>订阅 + 积分</td>
+          <td>Standard: ~$10/月<br>Pro: ~$30/月</td>
+          <td>视频 <strong>$0.0375/秒</strong><br>（比行业均价低 55%）</td>
+          <td><span class="pill green">开放</span><br>MaaS 平台</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>1.2 海外竞品</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>产品</th><th>计费模式</th><th>价格档位</th><th>单次生成成本</th><th>API</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Runway ML</strong><br><span class="pill purple">Gen-4</span></td>
+          <td>订阅 + Credit</td>
+          <td>Basic: $12/月<br>Standard: $28/月（2250 credits）<br>Pro: $76/月<br>Unlimited: $188/月</td>
+          <td>Gen-4: <strong>~10 credits/s</strong><br>Gen-3 Alpha: ~5 credits/s<br>Standard 套餐约 7.5 min Gen-4</td>
+          <td><span class="pill green">开放</span></td>
+        </tr>
+        <tr>
+          <td><strong>Pika Labs</strong><br><span class="pill purple">Pika 2.2</span></td>
+          <td>订阅 + Credit</td>
+          <td>Standard: $8/月（700 credits）<br>Pro: $28/月<br>Unlimited: $76/月</td>
+          <td>10s 1080p 视频约 <strong>80 credits</strong><br>API 批量 100 clips ~$45</td>
+          <td><span class="pill orange">有限</span></td>
+        </tr>
+        <tr>
+          <td><strong>Hailuo/MiniMax</strong><br><span class="pill purple">Hailuo 02</span></td>
+          <td>订阅 + 按量</td>
+          <td>Standard: $9.99/月（1000 credits）<br>Unlimited: $94.99/月</td>
+          <td>768p: <strong>$0.045/秒</strong><br>512p: $0.017/秒<br>6 秒视频约 $0.27</td>
+          <td><span class="pill green">开放</span></td>
+        </tr>
+        <tr>
+          <td><strong>Luma Dream Machine</strong></td>
+          <td>订阅 + API 独立计费</td>
+          <td>Plus: $30/月<br>Pro: $90/月<br>Ultra: $300/月</td>
+          <td>API: <strong>$0.20/条视频</strong></td>
+          <td><span class="pill green">开放</span></td>
+        </tr>
+        <tr>
+          <td><strong>Hedra</strong></td>
+          <td>订阅 + Credit</td>
+          <td>Basic: $10/月（1000 credits）<br>Creator: $30/月（3600 credits）<br>Pro: $75/月（11000 credits）</td>
+          <td>实时 avatar: <strong>$0.05/分钟</strong><br>（竞品的 1/15）</td>
+          <td><span class="pill orange">有限</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>1.3 竞品计费模式总结</h3>
+  <div class="highlight green">
+    <strong>行业共识：</strong>
+    <ul style="margin-top:8px">
+      <li><strong>订阅 + 积分/Credit 混合制</strong>是主流模式（Runway、Pika、可灵、Hailuo 均采用）</li>
+      <li>所有产品都提供<strong>免费体验额度</strong>（让用户先跑通再付费）</li>
+      <li>API 和消费端<strong>独立计费</strong>（Luma 最典型）</li>
+      <li>视频生成的市场价格区间：<strong>$0.02-0.14/秒</strong>（便宜到贵）</li>
+      <li>图像生成已经白菜化：<strong>$0.003-0.05/张</strong></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== 2. 图像生成模型 ===== -->
+<section class="section" id="s2">
+  <h2><span class="icon" style="background:linear-gradient(135deg,var(--pink),var(--accent));color:#fff">2</span> 模型接入方案：图像生成</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>模型</th><th>厂商</th><th>API 价格</th><th>速度</th><th>IP-Adapter/LoRA</th><th>适用场景</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Flux Schnell</strong></td>
+          <td>Black Forest Labs</td>
+          <td><strong>$0.003/张</strong></td>
+          <td>~1-2s</td>
+          <td><span class="pill orange">社区支持</span></td>
+          <td><span class="pill green">cost_first 首选</span></td>
+        </tr>
+        <tr>
+          <td><strong>Flux 1.1 Pro</strong></td>
+          <td>Black Forest Labs</td>
+          <td><strong>$0.04/张</strong></td>
+          <td>~3-5s</td>
+          <td><span class="pill orange">社区支持</span></td>
+          <td>quality_first 场景图</td>
+        </tr>
+        <tr>
+          <td><strong>Flux 2 Pro</strong></td>
+          <td>Black Forest Labs</td>
+          <td><strong>$0.03+/张</strong><br>（按 MP 计价）</td>
+          <td>~5-8s</td>
+          <td><span class="pill green">原生支持</span></td>
+          <td><span class="pill green">quality_first 首选</span></td>
+        </tr>
+        <tr>
+          <td><strong>SDXL Turbo</strong></td>
+          <td>Stability AI</td>
+          <td><strong>~$0.002/张</strong><br>（自部署更低）</td>
+          <td>< 1s</td>
+          <td><span class="pill green">完整生态</span></td>
+          <td>九宫格机位快速出图</td>
+        </tr>
+        <tr>
+          <td><strong>即梦 Seedream 5.0</strong></td>
+          <td>字节/火山引擎</td>
+          <td><strong>¥0.2/张</strong><br>（~$0.028）</td>
+          <td>~3-5s</td>
+          <td><span class="pill red">不支持</span></td>
+          <td>国内合规场景</td>
+        </tr>
+        <tr>
+          <td><strong>Imagen 3</strong></td>
+          <td>Google</td>
+          <td><strong>~$0.04/张</strong></td>
+          <td>~5s</td>
+          <td><span class="pill red">不支持</span></td>
+          <td>高质量备选</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="highlight purple">
+    <strong>角色一致性关键：</strong>IP-Adapter / LoRA 支持是选择图像模型的第一权重。Flux 系列 + SDXL 生态在这方面最成熟（开源社区大量 LoRA 和 IP-Adapter 实现）。即梦和 Imagen 虽然画质好，但不支持一致性注入，不适合做角色资产主力模型。
+  </div>
+</section>
+
+<!-- ===== 3. 视频生成模型 ===== -->
+<section class="section" id="s3">
+  <h2><span class="icon" style="background:linear-gradient(135deg,var(--orange),var(--red));color:#fff">3</span> 模型接入方案：视频生成</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>模型</th><th>厂商</th><th>API 价格</th><th>Image-to-Video</th><th>最大时长</th><th>适用</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Hailuo 02/2.3</strong></td>
+          <td>MiniMax</td>
+          <td>768p: <strong>$0.045/s</strong><br>512p: $0.017/s<br>2.3 Fast: <strong>~$0.023/s</strong></td>
+          <td><span class="pill green">支持</span></td>
+          <td>6-10s</td>
+          <td><span class="pill green">cost_first 首选</span></td>
+        </tr>
+        <tr>
+          <td><strong>Vidu 2.0</strong></td>
+          <td>生数科技</td>
+          <td>Turbo: <strong>$0.034/s</strong><br>Pro: $0.06/s</td>
+          <td><span class="pill green">支持</span></td>
+          <td>8s</td>
+          <td><span class="pill green">cost_first 备选</span></td>
+        </tr>
+        <tr>
+          <td><strong>可灵 Kling 2.0</strong></td>
+          <td>快手</td>
+          <td>标准: <strong>$0.14/s</strong><br>专业: $0.098/s(5s)</td>
+          <td><span class="pill green">支持</span></td>
+          <td>5-10s</td>
+          <td>quality_first 国内</td>
+        </tr>
+        <tr>
+          <td><strong>Runway Gen-4</strong></td>
+          <td>Runway ML</td>
+          <td>~<strong>$0.20-0.40/s</strong><br>（按 credit 折算）</td>
+          <td><span class="pill green">支持</span></td>
+          <td>10s</td>
+          <td><span class="pill green">quality_first 首选</span></td>
+        </tr>
+        <tr>
+          <td><strong>Pika 2.2</strong></td>
+          <td>Pika Labs</td>
+          <td>~<strong>$0.045/clip</strong><br>（API 批量 ~$0.45/10s）</td>
+          <td><span class="pill green">支持</span></td>
+          <td>10s</td>
+          <td>质量/价格平衡</td>
+        </tr>
+        <tr>
+          <td><strong>Luma Dream Machine</strong></td>
+          <td>Luma Labs</td>
+          <td><strong>$0.20/条</strong></td>
+          <td><span class="pill green">支持</span></td>
+          <td>5s</td>
+          <td>快速原型</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="highlight orange">
+    <strong>关键能力检查：</strong>
+    <ul style="margin-top:8px">
+      <li><strong>Image-to-Video（首帧驱动）</strong>— 所有候选模型均支持，这是短剧场景的刚需</li>
+      <li><strong>Hailuo 2.3 Fast</strong> 是当前性价比之王（~$0.023/s），适合 cost_first 策略</li>
+      <li><strong>Runway Gen-4</strong> 质量最好但价格是 Hailuo 的 10 倍，仅 quality_first 使用</li>
+      <li><strong>可灵</strong>在国内合规和中文场景有优势，是国内市场的推荐选择</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== 4. LLM ===== -->
+<section class="section" id="s4">
+  <h2><span class="icon" style="background:linear-gradient(135deg,var(--blue),var(--accent));color:#fff">4</span> 模型接入方案：LLM 大语言模型</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>模型</th><th>Input / 1M tokens</th><th>Output / 1M tokens</th><th>上下文窗口</th><th>适用任务</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>DeepSeek V3.2</strong></td>
+          <td><strong>$0.14</strong></td>
+          <td><strong>$0.28</strong></td>
+          <td>128K</td>
+          <td><span class="pill green">开场白 / 续写 / 改镜</span><br>极致低成本</td>
+        </tr>
+        <tr>
+          <td><strong>Qwen 3.5 Plus</strong></td>
+          <td><strong>$0.26</strong></td>
+          <td><strong>$1.56</strong></td>
+          <td>128K</td>
+          <td><span class="pill green">中文剧本 / 本地化</span><br>中文能力最强</td>
+        </tr>
+        <tr>
+          <td><strong>GPT-4o-mini</strong></td>
+          <td><strong>$0.15</strong></td>
+          <td><strong>$0.60</strong></td>
+          <td>128K</td>
+          <td><span class="pill green">一句话改镜 / 构图</span><br>快+便宜</td>
+        </tr>
+        <tr>
+          <td><strong>Gemini 2.5 Flash</strong></td>
+          <td><strong>$0.30</strong></td>
+          <td><strong>$2.50</strong></td>
+          <td>1M</td>
+          <td><span class="pill green">剧本解析（长文）</span><br>超长上下文</td>
+        </tr>
+        <tr>
+          <td><strong>GPT-4o</strong></td>
+          <td><strong>$2.50</strong></td>
+          <td><strong>$10.00</strong></td>
+          <td>128K</td>
+          <td>本地化 / 高质量翻译</td>
+        </tr>
+        <tr>
+          <td><strong>Claude Sonnet 4</strong></td>
+          <td><strong>$3.00</strong></td>
+          <td><strong>$15.00</strong></td>
+          <td>200K</td>
+          <td>本地化 / 文化适配<br>（最佳创意写作）</td>
+        </tr>
+        <tr>
+          <td><strong>Gemini 2.5 Pro</strong></td>
+          <td><strong>$1.25</strong></td>
+          <td><strong>$10.00</strong></td>
+          <td>1M</td>
+          <td>超长剧本解析备选</td>
+        </tr>
+        <tr>
+          <td><strong>Qwen 3 Max</strong></td>
+          <td><strong>$0.78</strong></td>
+          <td><strong>$3.90</strong></td>
+          <td>128K</td>
+          <td>中文高质量任务</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="highlight blue">
+    <strong>价格差距惊人：</strong>DeepSeek V3.2 的输入价格是 Claude Sonnet 4 的 <strong>1/21</strong>，输出价格是 <strong>1/54</strong>。合理路由可以把 LLM 成本压缩 90%+。
+  </div>
+</section>
+
+<!-- ===== 5. TTS 配音 ===== -->
+<section class="section" id="s5">
+  <h2><span class="icon" style="background:linear-gradient(135deg,var(--green),#55efc4);color:#000">5</span> 模型接入方案：TTS 配音</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>模型</th><th>计费方式</th><th>大致价格</th><th>口型同步</th><th>多语言</th><th>适用</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Fish Audio</strong></td>
+          <td>按 UTF-8 字节</td>
+          <td><strong>$15/1M bytes</strong><br>（~12h 语音）<br>≈ $0.021/分钟</td>
+          <td><span class="pill orange">需外接</span></td>
+          <td><span class="pill green">200万+ 音色</span></td>
+          <td><span class="pill green">P0 首选</span><br>极致性价比</td>
+        </tr>
+        <tr>
+          <td><strong>ElevenLabs</strong></td>
+          <td>按字符</td>
+          <td><strong>$0.18-0.30/千字符</strong><br>（overage）<br>≈ $0.12/分钟</td>
+          <td><span class="pill orange">需外接</span></td>
+          <td><span class="pill green">29 语言</span></td>
+          <td>质量最佳<br>英文出海首选</td>
+        </tr>
+        <tr>
+          <td><strong>MiniMax TTS</strong></td>
+          <td>按调用</td>
+          <td>~<strong>$0.05/分钟</strong></td>
+          <td><span class="pill orange">需外接</span></td>
+          <td><span class="pill green">中英日韩</span></td>
+          <td>国内中文首选</td>
+        </tr>
+        <tr>
+          <td><strong>Hedra Character</strong></td>
+          <td>按时长</td>
+          <td><strong>$0.05/分钟</strong><br>（实时 avatar）</td>
+          <td><span class="pill green">原生支持</span></td>
+          <td><span class="pill green">多语言</span></td>
+          <td><span class="pill green">口型同步首选</span></td>
+        </tr>
+        <tr>
+          <td><strong>MuseTalk</strong><br><span class="pill gray">开源</span></td>
+          <td>自部署</td>
+          <td><strong>仅 GPU 成本</strong><br>≈ $0.005/分钟</td>
+          <td><span class="pill green">原生支持</span></td>
+          <td><span class="pill green">语言无关</span></td>
+          <td>P1 自部署方案</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="highlight green">
+    <strong>口型同步方案：</strong>TTS（文字转语音）和口型同步是两个独立步骤。P0 阶段推荐 <strong>Fish Audio（TTS）+ Hedra（口型同步）</strong>组合；P1 阶段可用 <strong>MuseTalk 自部署</strong>替代 Hedra 大幅降低成本。
+  </div>
+</section>
+
+<!-- ===== 6. 音乐生成 ===== -->
+<section class="section" id="s6">
+  <h2><span class="icon" style="background:linear-gradient(135deg,var(--orange),#fdcb6e);color:#000">6</span> 模型接入方案：音乐生成</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><span class="dot" style="background:var(--accent)"></span>Suno</div>
+      <ul style="font-size:.85rem">
+        <li>Premier 套餐 $30/月 → 10000 credits</li>
+        <li>约 <strong>$0.03-0.04/首</strong>（按订阅折算）</li>
+        <li>第三方 API: <strong>$0.11/首</strong>（EvoLink）</li>
+        <li><span class="pill red">无官方公开 API</span>，需走第三方</li>
+        <li>歌曲质量高，适合 BGM 生成</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="dot" style="background:var(--green)"></span>Udio</div>
+      <ul style="font-size:.85rem">
+        <li>定价与 Suno 相近</li>
+        <li>音乐风格更多元</li>
+        <li><span class="pill red">API 同样受限</span></li>
+        <li>作为 Suno 备选</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="highlight orange">
+    <strong>P0 决策：</strong>音乐生成 API 生态不成熟，P0 使用<strong>预置 BGM 库</strong>（50-100 首，按 mood 标签分类，采买版权）。P1 再接入 Suno API 做 AI 实时配乐。单首 BGM 预采购成本 ≈ $0（摊薄到大量用户后忽略不计）vs AI 生成 $0.11/首。
+  </div>
+</section>
+
+<!-- ===== 7. 推荐模型组合 ===== -->
+<section class="section" id="s7">
+  <h2><span class="icon" style="background:linear-gradient(135deg,#00cec9,#6c5ce7);color:#fff">7</span> 推荐模型组合与路由策略</h2>
+
+  <h3>7.1 cost_first 策略（默认 — 覆盖 70%+ 用户）</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>环节</th><th>主模型</th><th>单次成本</th><th>备选模型</th></tr></thead>
+      <tbody>
+        <tr><td>LLM（短任务）</td><td><strong>DeepSeek V3.2</strong></td><td>~$0.001/次</td><td>GPT-4o-mini</td></tr>
+        <tr><td>LLM（长任务）</td><td><strong>Qwen 3.5 Plus</strong></td><td>~$0.005/次</td><td>Gemini 2.5 Flash</td></tr>
+        <tr><td>图像生成</td><td><strong>Flux Schnell</strong></td><td><strong>$0.003/张</strong></td><td>SDXL Turbo（自部署）</td></tr>
+        <tr><td>视频生成</td><td><strong>Hailuo 2.3 Fast</strong></td><td><strong>$0.14/6s</strong></td><td>Vidu Turbo</td></tr>
+        <tr><td>TTS 配音</td><td><strong>Fish Audio</strong></td><td><strong>$0.002/条</strong></td><td>MiniMax TTS</td></tr>
+        <tr><td>口型同步</td><td><strong>Hedra</strong></td><td><strong>$0.025/条</strong></td><td>MuseTalk（P1）</td></tr>
+        <tr><td>BGM</td><td><strong>预置库</strong></td><td>$0</td><td>Suno（P1）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>7.2 quality_first 策略（玄幻/古风/悬疑等类型）</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>环节</th><th>主模型</th><th>单次成本</th><th>备选模型</th></tr></thead>
+      <tbody>
+        <tr><td>LLM（短任务）</td><td><strong>GPT-4o-mini</strong></td><td>~$0.002/次</td><td>DeepSeek V3.2</td></tr>
+        <tr><td>LLM（长任务）</td><td><strong>Claude Sonnet 4</strong></td><td>~$0.03/次</td><td>GPT-4o</td></tr>
+        <tr><td>图像生成</td><td><strong>Flux 2 Pro</strong></td><td><strong>$0.04/张</strong></td><td>Flux 1.1 Pro</td></tr>
+        <tr><td>视频生成</td><td><strong>Runway Gen-4</strong></td><td><strong>$1.50/6s</strong></td><td>可灵 Kling 2.0</td></tr>
+        <tr><td>TTS 配音</td><td><strong>ElevenLabs</strong></td><td><strong>$0.01/条</strong></td><td>Fish Audio</td></tr>
+        <tr><td>口型同步</td><td><strong>Hedra</strong></td><td><strong>$0.025/条</strong></td><td>—</td></tr>
+        <tr><td>BGM</td><td><strong>预置库</strong></td><td>$0</td><td>Suno（P1）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>7.3 一稿多投的模型路由</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>目标市场</th><th>LLM 本地化</th><th>TTS</th><th>特殊考虑</th></tr></thead>
+      <tbody>
+        <tr><td>国内</td><td>Qwen 3.5 Plus</td><td>MiniMax TTS / Fish Audio</td><td>合规：用国内模型避免出海风险</td></tr>
+        <tr><td>北美/欧洲</td><td>GPT-4o / Claude Sonnet 4</td><td>ElevenLabs</td><td>英文母语质量要求高</td></tr>
+        <tr><td>东南亚</td><td>GPT-4o（印尼语）</td><td>Fish Audio</td><td>成本敏感市场</td></tr>
+        <tr><td>日韩</td><td>GPT-4o / Claude</td><td>ElevenLabs</td><td>日语语法精确度要求高</td></tr>
+        <tr><td>中东</td><td>GPT-4o（阿拉伯语）</td><td>ElevenLabs</td><td>RTL 字幕 + 文化合规</td></tr>
+        <tr><td>拉美</td><td>GPT-4o（西班牙语）</td><td>ElevenLabs / Fish</td><td>拉美西语 vs 西班牙西语</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 8. 单集成本测算 ===== -->
+<section class="section" id="s8">
+  <h2><span class="icon" style="background:linear-gradient(135deg,#fdcb6e,#e17055);color:#000">8</span> 单集成本测算</h2>
+
+  <p>基于标准短剧参数：<strong>11 个镜头 × 7 秒/镜 ≈ 75 秒</strong>，<strong>8 个角色资产 + 5 个场景资产 + 4 个道具资产</strong></p>
+
+  <h3>8.1 cost_first 模式（默认）</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>环节</th><th>调用次数</th><th>单次成本</th><th>小计</th></tr></thead>
+      <tbody>
+        <tr><td>开场白生成（LLM）</td><td>1 次</td><td>$0.001</td><td>$0.001</td></tr>
+        <tr><td>剧本解析（LLM 长）</td><td>1 次</td><td>$0.005</td><td>$0.005</td></tr>
+        <tr><td>资产图片生成</td><td>17 张</td><td>$0.003</td><td>$0.051</td></tr>
+        <tr><td>镜头列表生成（LLM）</td><td>1 次</td><td>$0.005</td><td>$0.005</td></tr>
+        <tr><td>分镜图生成</td><td>11 张</td><td>$0.003</td><td>$0.033</td></tr>
+        <tr><td>视频生成（Hailuo 2.3 Fast）</td><td>11 条 × 6s</td><td>$0.14</td><td><strong>$1.54</strong></td></tr>
+        <tr><td>TTS 配音（Fish Audio）</td><td>11 条</td><td>$0.002</td><td>$0.022</td></tr>
+        <tr><td>口型同步（Hedra）</td><td>11 条 × 6s</td><td>$0.025</td><td>$0.275</td></tr>
+        <tr><td>成片渲染</td><td>1 次</td><td>$0.01</td><td>$0.01</td></tr>
+        <tr style="background:rgba(0,206,201,.08)">
+          <td colspan="3"><strong>合计（单集成本 cost_first）</strong></td>
+          <td><strong style="color:var(--green);font-size:1.1rem">≈ $1.94</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>8.2 quality_first 模式</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>环节</th><th>调用次数</th><th>单次成本</th><th>小计</th></tr></thead>
+      <tbody>
+        <tr><td>开场白生成（LLM）</td><td>1 次</td><td>$0.002</td><td>$0.002</td></tr>
+        <tr><td>剧本解析（LLM 长）</td><td>1 次</td><td>$0.03</td><td>$0.03</td></tr>
+        <tr><td>资产图片生成</td><td>17 张</td><td>$0.04</td><td>$0.68</td></tr>
+        <tr><td>镜头列表生成（LLM）</td><td>1 次</td><td>$0.03</td><td>$0.03</td></tr>
+        <tr><td>分镜图生成</td><td>11 张</td><td>$0.04</td><td>$0.44</td></tr>
+        <tr><td>视频生成（Runway Gen-4）</td><td>11 条 × 6s</td><td>$1.50</td><td><strong>$16.50</strong></td></tr>
+        <tr><td>TTS 配音（ElevenLabs）</td><td>11 条</td><td>$0.01</td><td>$0.11</td></tr>
+        <tr><td>口型同步（Hedra）</td><td>11 条 × 6s</td><td>$0.025</td><td>$0.275</td></tr>
+        <tr><td>成片渲染</td><td>1 次</td><td>$0.01</td><td>$0.01</td></tr>
+        <tr style="background:rgba(255,107,107,.08)">
+          <td colspan="3"><strong>合计（单集成本 quality_first）</strong></td>
+          <td><strong style="color:var(--red);font-size:1.1rem">≈ $18.08</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>8.3 一稿多投附加成本（单个地域变体）</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>环节</th><th>成本（cost_first）</th><th>成本（quality_first）</th></tr></thead>
+      <tbody>
+        <tr><td>剧本本地化（LLM 长）</td><td>$0.005</td><td>$0.03</td></tr>
+        <tr><td>角色资产重生成（8 张）</td><td>$0.024</td><td>$0.32</td></tr>
+        <tr><td>场景资产重生成（约 3 张）</td><td>$0.009</td><td>$0.12</td></tr>
+        <tr><td>分镜图重生成（11 张）</td><td>$0.033</td><td>$0.44</td></tr>
+        <tr><td>视频重生成（11 条）</td><td>$1.54</td><td>$16.50</td></tr>
+        <tr><td>TTS + 口型重做</td><td>$0.30</td><td>$0.39</td></tr>
+        <tr><td>成片渲染</td><td>$0.01</td><td>$0.01</td></tr>
+        <tr style="background:rgba(253,121,168,.08)">
+          <td><strong>单个地域变体合计</strong></td>
+          <td><strong style="color:var(--pink)">≈ $1.92</strong></td>
+          <td><strong style="color:var(--pink)">≈ $17.81</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="metrics">
+    <div class="metric"><div class="val" style="color:var(--green)">$1.94</div><div class="label">cost_first 单集成本</div></div>
+    <div class="metric"><div class="val" style="color:var(--red)">$18.08</div><div class="label">quality_first 单集成本</div></div>
+    <div class="metric"><div class="val" style="color:var(--pink)">$1.92</div><div class="label">一稿多投/地域（cost）</div></div>
+    <div class="metric"><div class="val" style="color:var(--orange)">~80%</div><div class="label">视频生成占总成本比</div></div>
+  </div>
+
+  <div class="highlight red">
+    <strong>关键发现：视频生成占总成本的 ~80%。</strong>优化视频生成成本是控制整体成本的关键杠杆。Hailuo 2.3 Fast 比 Runway Gen-4 便宜 <strong>10 倍</strong>以上。在 cost_first 模式下，单集成本可控制在 <strong>¥14 以内</strong>，这是一个非常有竞争力的价格。
+  </div>
+</section>
+
+<!-- ===== 9. 我们的计费方案 ===== -->
+<section class="section" id="s9">
+  <h2><span class="icon" style="background:linear-gradient(135deg,var(--green),var(--blue));color:#000">9</span> 我们的计费方案设计</h2>
+
+  <h3>9.1 计费模式选择</h3>
+  <div class="highlight purple">
+    <strong>决策：采用「订阅 + 积分」混合制。</strong><br>
+    <ul style="margin-top:8px">
+      <li><strong>订阅制</strong>提供稳定的基础额度 + 高级功能解锁（去水印、高画质、商用授权）</li>
+      <li><strong>积分制</strong>让用户按需消费，避免"用不完浪费"的心理负担</li>
+      <li>与竞品（Runway、可灵、Hailuo）的模式一致，用户教育成本低</li>
+    </ul>
+  </div>
+
+  <h3>9.2 积分体系设计</h3>
+  <p><strong>1 积分 = ¥0.01 = ~$0.0014</strong>（与 Black Forest Labs 的 1 credit = $0.01 同思路，但人民币计价）</p>
+
+  <h3>9.3 订阅套餐</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>套餐</th><th>月价</th><th>月积分</th><th>可做集数</th><th>核心权益</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>免费体验</strong></td>
+          <td>¥0</td>
+          <td>500<br><span style="color:var(--text-muted);font-size:.78rem">（新用户一次性赠 2000）</span></td>
+          <td>~1 集 cost_first<br>（含 1 次一稿多投体验）</td>
+          <td>完整 4 阶段流程<br>有水印<br>720p 导出</td>
+        </tr>
+        <tr style="background:rgba(253,203,110,.05)">
+          <td><strong>创作者</strong><br><span class="pill orange">最受欢迎</span></td>
+          <td><strong>¥49/月</strong><br><span style="font-size:.78rem;color:var(--text-muted)">年付 ¥39/月</span></td>
+          <td>5,000</td>
+          <td>~3-4 集 cost_first<br>或 1 集 + 2 个地域变体</td>
+          <td>无水印<br>1080p 导出<br>高级调整面板<br>一稿多投</td>
+        </tr>
+        <tr>
+          <td><strong>工作室</strong></td>
+          <td><strong>¥199/月</strong><br><span style="font-size:.78rem;color:var(--text-muted)">年付 ¥159/月</span></td>
+          <td>25,000</td>
+          <td>~15 集 cost_first<br>或 5 集 + 5 个地域</td>
+          <td>全部创作者权益<br>quality_first 模式解锁<br>优先队列<br>API 访问</td>
+        </tr>
+        <tr>
+          <td><strong>出海旗舰</strong></td>
+          <td><strong>¥699/月</strong><br><span style="font-size:.78rem;color:var(--text-muted)">年付 ¥559/月</span></td>
+          <td>80,000</td>
+          <td>~50 集 cost_first<br>或批量出海制作</td>
+          <td>全部工作室权益<br>专属客服<br>批量 API<br>LoRA 角色训练</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>9.4 积分加购</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>加购包</th><th>价格</th><th>积分</th><th>折扣</th></tr></thead>
+      <tbody>
+        <tr><td>小包</td><td>¥9.9</td><td>1,000</td><td>—</td></tr>
+        <tr><td>中包</td><td>¥39</td><td>4,500</td><td>~15% off</td></tr>
+        <tr><td>大包</td><td>¥99</td><td>12,000</td><td>~20% off</td></tr>
+        <tr><td>豪华包</td><td>¥299</td><td>40,000</td><td>~25% off</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>9.5 定价逻辑</h3>
+  <div class="highlight green">
+    <strong>定价公式：用户支付价 = 实际模型成本 × 3-5 倍加价率</strong>
+    <ul style="margin-top:8px">
+      <li>cost_first 单集实际成本 ≈ ¥14 → 用户消耗约 ¥14 × 3 = <strong>¥42 积分</strong>（~1400 积分）</li>
+      <li>创作者套餐 ¥49/月给 5000 积分 → 够做 ~3.5 集 → <strong>单集用户成本 ¥14</strong></li>
+      <li>这意味着创作者套餐的用户感知是"¥14/集"，远低于任何真人短剧的单集制作成本（通常 ¥3000+）</li>
+      <li>加价率覆盖：模型成本 + 平台运维 + 算法迭代 + 合理利润</li>
+    </ul>
+  </div>
+
+  <h3>9.6 新用户转化设计</h3>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><span class="dot" style="background:var(--green)"></span>注册即送 2000 积分</div>
+      <p style="font-size:.85rem;color:var(--text-dim)">
+        足够完成 <strong>1 集完整短剧 + 1 次一稿多投</strong>体验。<br>
+        这是北极星指标（NU1D-Publish Rate ≥ 15%）的关键：用户必须有足够积分跑完全流程才会转化。
+      </p>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="dot" style="background:var(--orange)"></span>首月特价 ¥19</div>
+      <p style="font-size:.85rem;color:var(--text-dim)">
+        参考可灵的首月 ¥19 策略。<br>
+        创作者套餐首月 ¥19（原价 ¥49），让用户低成本体验完整付费权益。<br>
+        续费率目标 > 40%。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 10. 积分定价详细规则 ===== -->
+<section class="section" id="s10">
+  <h2><span class="icon" style="background:var(--accent);color:#fff">10</span> 积分定价详细规则</h2>
+
+  <h3>10.1 各动作积分消耗表</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>动作</th><th>积分消耗</th><th>实际成本</th><th>加价率</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>LLM 短调用</strong><br>开场白/改镜/续写</td>
+          <td><strong>1</strong></td>
+          <td>~¥0.007</td>
+          <td>~1.4x</td>
+          <td>DeepSeek V3.2 极便宜，积分象征性收</td>
+        </tr>
+        <tr>
+          <td><strong>LLM 长上下文调用</strong><br>剧本解析/镜头生成</td>
+          <td><strong>5</strong></td>
+          <td>~¥0.035</td>
+          <td>~1.4x</td>
+          <td>Qwen 3.5 Plus / Gemini Flash</td>
+        </tr>
+        <tr>
+          <td><strong>LLM 本地化</strong><br>一稿多投翻译</td>
+          <td><strong>15</strong></td>
+          <td>~¥0.07</td>
+          <td>~2.1x</td>
+          <td>GPT-4o / Claude，高质量要求</td>
+        </tr>
+        <tr>
+          <td><strong>图片生成（cost_first）</strong></td>
+          <td><strong>3</strong></td>
+          <td>~¥0.021</td>
+          <td>~1.4x</td>
+          <td>Flux Schnell</td>
+        </tr>
+        <tr>
+          <td><strong>图片生成（quality_first）</strong></td>
+          <td><strong>10</strong></td>
+          <td>~¥0.28</td>
+          <td>~3.6x</td>
+          <td>Flux 2 Pro</td>
+        </tr>
+        <tr>
+          <td><strong>视频生成（cost_first）</strong><br>per 6s clip</td>
+          <td><strong>30</strong></td>
+          <td>~¥1.0</td>
+          <td>~3x</td>
+          <td>Hailuo 2.3 Fast</td>
+        </tr>
+        <tr>
+          <td><strong>视频生成（quality_first）</strong><br>per 6s clip</td>
+          <td><strong>200</strong></td>
+          <td>~¥10.5</td>
+          <td>~1.9x</td>
+          <td>Runway Gen-4（利润空间小，靠量）</td>
+        </tr>
+        <tr>
+          <td><strong>TTS 配音</strong><br>单条台词</td>
+          <td><strong>2</strong></td>
+          <td>~¥0.014</td>
+          <td>~1.4x</td>
+          <td>Fish Audio</td>
+        </tr>
+        <tr>
+          <td><strong>口型同步</strong><br>per clip</td>
+          <td><strong>8</strong></td>
+          <td>~¥0.18</td>
+          <td>~4.4x</td>
+          <td>Hedra</td>
+        </tr>
+        <tr>
+          <td><strong>成片渲染</strong></td>
+          <td><strong>5</strong></td>
+          <td>~¥0.07</td>
+          <td>~7x</td>
+          <td>自有服务器，成本极低</td>
+        </tr>
+        <tr>
+          <td><strong>九宫格机位</strong><br>（一次 9 张）</td>
+          <td><strong>20</strong></td>
+          <td>~¥0.19</td>
+          <td>~10x</td>
+          <td>高级功能，利润高</td>
+        </tr>
+        <tr>
+          <td><strong>LoRA 角色训练</strong></td>
+          <td><strong>100</strong></td>
+          <td>~¥3.5</td>
+          <td>~2.9x</td>
+          <td>P1 功能，GPU 密集</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>10.2 单集积分消耗汇总</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>项目</th><th>cost_first（积分）</th><th>quality_first（积分）</th></tr></thead>
+      <tbody>
+        <tr><td>LLM 调用合计</td><td>~12</td><td>~25</td></tr>
+        <tr><td>资产图片（17 张）</td><td>51</td><td>170</td></tr>
+        <tr><td>分镜图（11 张）</td><td>33</td><td>110</td></tr>
+        <tr><td>视频生成（11 条）</td><td><strong>330</strong></td><td><strong>2200</strong></td></tr>
+        <tr><td>TTS 配音（11 条）</td><td>22</td><td>22</td></tr>
+        <tr><td>口型同步（11 条）</td><td>88</td><td>88</td></tr>
+        <tr><td>成片渲染</td><td>5</td><td>5</td></tr>
+        <tr style="background:rgba(0,206,201,.06)">
+          <td><strong>单集合计</strong></td>
+          <td><strong style="color:var(--green);font-size:1.05rem">~541 积分</strong><br><span style="font-size:.78rem;color:var(--text-muted)">≈ ¥5.41</span></td>
+          <td><strong style="color:var(--red);font-size:1.05rem">~2620 积分</strong><br><span style="font-size:.78rem;color:var(--text-muted)">≈ ¥26.20</span></td>
+        </tr>
+        <tr style="background:rgba(253,121,168,.06)">
+          <td><strong>+ 单个地域变体</strong></td>
+          <td><strong style="color:var(--pink)">~510 积分</strong></td>
+          <td><strong style="color:var(--pink)">~2530 积分</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>10.3 各套餐可做集数</h3>
+  <div class="metrics">
+    <div class="metric"><div class="val" style="color:var(--text-muted)">~1 集</div><div class="label">免费体验（500 积分）</div></div>
+    <div class="metric"><div class="val" style="color:var(--green)">~3 集</div><div class="label">注册赠送（2000 积分）</div></div>
+    <div class="metric"><div class="val" style="color:var(--orange)">~9 集</div><div class="label">创作者（5000 积分/月）</div></div>
+    <div class="metric"><div class="val" style="color:var(--blue)">~46 集</div><div class="label">工作室（25000 积分/月）</div></div>
+    <div class="metric"><div class="val" style="color:var(--accent-light)">~148 集</div><div class="label">出海旗舰（80000 积分/月）</div></div>
+  </div>
+</section>
+
+<!-- ===== 11. 风险与成本优化 ===== -->
+<section class="section" id="s11">
+  <h2><span class="icon" style="background:var(--red);color:#fff">11</span> 风险与成本优化</h2>
+
+  <h3>11.1 成本控制策略</h3>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><span class="dot" style="background:var(--green)"></span>短期（P0）</div>
+      <ul style="font-size:.85rem">
+        <li><strong>并发控制</strong>：每用户最多 4 个并发生成任务</li>
+        <li><strong>失败不扣费</strong>：模型调用失败的积分原路返还</li>
+        <li><strong>缓存复用</strong>：开场白/参考剧库缓存 5 分钟</li>
+        <li><strong>prompt 优化</strong>：减少 token 浪费，提高一次成功率</li>
+        <li><strong>降级链</strong>：贵模型失败自动 fallback 到便宜模型</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="dot" style="background:var(--blue)"></span>中期（P1-P2）</div>
+      <ul style="font-size:.85rem">
+        <li><strong>MuseTalk 自部署</strong>：替代 Hedra 口型同步，成本降 80%</li>
+        <li><strong>SDXL 自部署</strong>：图片生成成本趋近于零</li>
+        <li><strong>Batch API</strong>：非实时任务走 OpenAI Batch（50% off）</li>
+        <li><strong>Gemini Context Caching</strong>：重复 prompt 场景降 90%</li>
+        <li><strong>动态路由</strong>：监控各厂商价格变化，实时切换最优</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>11.2 单位经济模型</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>指标</th><th>cost_first</th><th>quality_first</th></tr></thead>
+      <tbody>
+        <tr><td>单集实际成本</td><td>¥14</td><td>¥130</td></tr>
+        <tr><td>单集用户消耗积分</td><td>541 → ¥5.41</td><td>2620 → ¥26.20</td></tr>
+        <tr><td>套餐月费 / 可做集数</td><td>¥49 / ~9 集</td><td>¥199 / ~9 集</td></tr>
+        <tr><td>单集收入（含套餐分摊）</td><td>~¥5.4</td><td>~¥22</td></tr>
+        <tr><td>单集毛利</td><td><span class="pill red">-¥8.6（亏损）</span></td><td><span class="pill red">-¥108（亏损）</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="highlight red">
+    <strong>重要发现：按当前成本结构，积分定价覆盖不了模型成本。</strong>这是 AI 应用的普遍困境。<br><br>
+    <strong>解法：</strong>
+    <ol style="margin-top:8px">
+      <li><strong>提高积分消耗</strong>：视频生成从 30 积分提至 50 积分（cost_first 单集 ~870 积分 → ¥8.7）</li>
+      <li><strong>套餐定价上调</strong>：创作者套餐 ¥79/月、工作室 ¥299/月更合理</li>
+      <li><strong>用免费额度做漏斗，靠付费加购盈利</strong>：积分加购的加价率更高（~5x）</li>
+      <li><strong>中期自部署降成本</strong>：视频模型自部署后成本可降 50-70%</li>
+      <li><strong>广告/分发分成</strong>：P2 阶段接入平台分发，从内容收益中抽成</li>
+    </ol>
+  </div>
+
+  <h3>11.3 调整后的建议定价</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>套餐</th><th>月价</th><th>月积分</th><th>可做集数（cost_first）</th><th>单集用户成本</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>免费</td>
+          <td>¥0</td>
+          <td>一次性赠 2000</td>
+          <td>~2 集</td>
+          <td>¥0</td>
+        </tr>
+        <tr style="background:rgba(253,203,110,.05)">
+          <td><strong>创作者</strong></td>
+          <td><strong>¥79/月</strong></td>
+          <td>6,000</td>
+          <td>~7 集</td>
+          <td>¥11.3/集</td>
+        </tr>
+        <tr>
+          <td><strong>工作室</strong></td>
+          <td><strong>¥299/月</strong></td>
+          <td>30,000</td>
+          <td>~35 集</td>
+          <td>¥8.5/集</td>
+        </tr>
+        <tr>
+          <td><strong>出海旗舰</strong></td>
+          <td><strong>¥899/月</strong></td>
+          <td>100,000</td>
+          <td>~115 集</td>
+          <td>¥7.8/集</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="highlight green">
+    <strong>最终定价原则：</strong>
+    <ul style="margin-top:8px">
+      <li>免费额度够做 2 集体验（转化漏斗）</li>
+      <li>创作者套餐 <strong>¥79/月 ≈ ¥11/集</strong> — 对比真人短剧 ¥3000+/集，价值感极强</li>
+      <li>工作室套餐量大打折，<strong>¥8.5/集</strong> — MCN 可接受</li>
+      <li>出海旗舰套餐含 LoRA 角色训练 + 批量 API，瞄准高 LTV 客户</li>
+      <li>所有套餐首月 5 折</li>
+    </ul>
+  </div>
+</section>
+
+<!-- Sources -->
+<div class="sources">
+  <h3>📎 数据来源</h3>
+  <a href="https://klingai.com/global/dev/pricing" target="_blank">Kling AI API Pricing</a>
+  <a href="https://docs.dev.runwayml.com/guides/pricing/" target="_blank">Runway ML API Pricing</a>
+  <a href="https://pika.art/pricing" target="_blank">Pika Labs Pricing</a>
+  <a href="https://docs.bfl.ml/quick_start/pricing" target="_blank">Black Forest Labs (Flux) Pricing</a>
+  <a href="https://fal.ai/models/fal-ai/minimax/hailuo-02" target="_blank">Hailuo / MiniMax API via fal.ai</a>
+  <a href="https://lumalabs.ai/pricing" target="_blank">Luma Dream Machine Pricing</a>
+  <a href="https://www.vidu.com/pricing" target="_blank">Vidu Pricing</a>
+  <a href="https://www.hedra.com/plans" target="_blank">Hedra Pricing</a>
+  <a href="https://elevenlabs.io/pricing/api" target="_blank">ElevenLabs API Pricing</a>
+  <a href="https://docs.fish.audio/developer-guide/models-pricing/pricing-and-rate-limits" target="_blank">Fish Audio Pricing</a>
+  <a href="https://suno.com/pricing" target="_blank">Suno AI Pricing</a>
+  <a href="https://developers.openai.com/api/docs/pricing" target="_blank">OpenAI API Pricing</a>
+  <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank">Claude API Pricing</a>
+  <a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank">Gemini API Pricing</a>
+  <a href="https://api-docs.deepseek.com/quick_start/pricing/" target="_blank">DeepSeek API Pricing</a>
+  <a href="https://pricepertoken.com/pricing-page/provider/qwen" target="_blank">Qwen API Pricing</a>
+  <a href="https://www.volcengine.com/docs/85621/1544714" target="_blank">即梦 AI 计费说明</a>
+  <a href="https://aitoolanalysis.com/kling-ai-pricing/" target="_blank">Kling AI Pricing 2026 Analysis</a>
+  <a href="https://wavespeed.ai/blog/posts/complete-guide-ai-video-apis-2026/" target="_blank">Complete Guide to AI Video APIs 2026</a>
+</div>
+
+<!-- Footer -->
+<footer style="text-align:center;padding:48px 0 32px;border-top:1px solid var(--border);margin-top:48px">
+  <p style="color:var(--text-muted);font-size:.82rem">短剧创作工具 v2.0 · 计费方案与模型接入方案 · 2026.04</p>
+  <p style="color:var(--text-muted);font-size:.75rem;margin-top:4px">配套文档：<a href="index.html">PRD 主文档</a></p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,1828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>短剧创作工具 v2.0 — 产品需求文档</title>
+<style>
+/* ===== Reset & Base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;
+  --bg-card:#12121a;
+  --bg-card-hover:#1a1a26;
+  --bg-code:#0d0d14;
+  --border:#1e1e2e;
+  --border-light:#2a2a3e;
+  --text:#e0e0e8;
+  --text-dim:#8888a0;
+  --text-muted:#5a5a72;
+  --accent:#6c5ce7;
+  --accent-light:#a29bfe;
+  --green:#00cec9;
+  --green-dim:#00b89420;
+  --orange:#fdcb6e;
+  --orange-dim:#fdcb6e20;
+  --red:#ff6b6b;
+  --red-dim:#ff6b6b20;
+  --blue:#74b9ff;
+  --blue-dim:#74b9ff20;
+  --pink:#fd79a8;
+  --radius:12px;
+  --radius-sm:8px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --font-mono:'SF Mono','Fira Code','Cascadia Code',monospace;
+  --font-sans:-apple-system,'SF Pro Display','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  --max-w:960px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  font-family:var(--font-sans);
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--accent);color:#fff}
+a{color:var(--accent-light);text-decoration:none;transition:color .2s}
+a:hover{color:#fff}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+/* ===== Layout ===== */
+.page-wrapper{
+  max-width:var(--max-w);
+  margin:0 auto;
+  padding:0 24px 120px;
+}
+
+/* ===== Hero ===== */
+.hero{
+  position:relative;
+  padding:100px 0 60px;
+  text-align:center;
+  overflow:hidden;
+}
+.hero::before{
+  content:'';
+  position:absolute;
+  top:-120px;left:50%;
+  transform:translateX(-50%);
+  width:600px;height:600px;
+  background:radial-gradient(circle,rgba(108,92,231,.18) 0%,transparent 70%);
+  pointer-events:none;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 16px;
+  background:var(--accent);
+  color:#fff;font-size:12px;font-weight:600;
+  border-radius:999px;letter-spacing:.5px;
+  text-transform:uppercase;
+  margin-bottom:24px;
+}
+.hero h1{
+  font-size:clamp(2rem,5vw,3.2rem);
+  font-weight:800;
+  line-height:1.2;
+  background:linear-gradient(135deg,#fff 30%,var(--accent-light) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:16px;
+}
+.hero .subtitle{
+  font-size:1.1rem;color:var(--text-dim);
+  max-width:640px;margin:0 auto 32px;
+}
+.hero-meta{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:24px;
+  font-size:.85rem;color:var(--text-muted);
+}
+.hero-meta span{display:flex;align-items:center;gap:6px}
+
+/* ===== TOC ===== */
+.toc{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:28px 32px;
+  margin-bottom:56px;
+}
+.toc h2{font-size:1.05rem;font-weight:700;margin-bottom:16px;color:var(--accent-light)}
+.toc-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px 32px;
+}
+.toc a{
+  display:block;padding:5px 0;font-size:.9rem;color:var(--text-dim);
+  transition:color .15s,padding-left .15s;
+}
+.toc a:hover{color:var(--accent-light);padding-left:6px}
+.toc a .num{color:var(--text-muted);font-family:var(--font-mono);font-size:.8rem;margin-right:6px}
+
+/* ===== Section ===== */
+.section{margin-bottom:64px;min-width:0;overflow:hidden}
+.section-anchor{display:block;position:relative;top:-80px;visibility:hidden}
+
+.section > h2{
+  font-size:1.5rem;font-weight:800;
+  padding-bottom:12px;
+  border-bottom:2px solid var(--border);
+  margin-bottom:28px;
+  display:flex;align-items:center;gap:12px;
+}
+.section > h2 .icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:10px;font-size:1.1rem;
+  flex-shrink:0;
+}
+.section h3{
+  font-size:1.15rem;font-weight:700;
+  margin:32px 0 12px;
+  color:var(--accent-light);
+}
+.section h4{
+  font-size:1rem;font-weight:600;
+  margin:20px 0 8px;
+  color:var(--text);
+}
+
+/* ===== Cards ===== */
+.card{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:24px;
+  margin-bottom:16px;
+  transition:border-color .2s,box-shadow .2s;
+}
+.card:hover{border-color:var(--border-light);box-shadow:var(--shadow)}
+.card-header{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:12px;font-weight:700;font-size:1rem;
+}
+.card-header .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ===== Highlight Box ===== */
+.highlight-box{
+  border-radius:var(--radius);
+  padding:20px 24px;
+  margin:16px 0;
+  font-size:.95rem;
+  line-height:1.7;
+}
+.highlight-box.purple{background:rgba(108,92,231,.1);border-left:3px solid var(--accent)}
+.highlight-box.green{background:var(--green-dim);border-left:3px solid var(--green)}
+.highlight-box.orange{background:var(--orange-dim);border-left:3px solid var(--orange)}
+.highlight-box.red{background:var(--red-dim);border-left:3px solid var(--red)}
+.highlight-box.blue{background:var(--blue-dim);border-left:3px solid var(--blue)}
+.highlight-box strong{color:#fff}
+
+/* ===== Quote ===== */
+.quote{
+  font-size:1.15rem;
+  font-weight:600;
+  color:#fff;
+  padding:24px 28px;
+  background:linear-gradient(135deg,rgba(108,92,231,.15),rgba(0,206,201,.1));
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  margin:16px 0;
+  position:relative;
+}
+.quote::before{
+  content:'\201C';font-size:3rem;position:absolute;
+  top:8px;left:16px;color:var(--accent);opacity:.4;
+  font-family:Georgia,serif;
+}
+
+/* ===== Tables ===== */
+.table-wrap{
+  overflow-x:auto;
+  margin:16px 0;
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+}
+table{
+  width:100%;border-collapse:collapse;
+  font-size:.9rem;
+}
+thead{background:var(--bg-card)}
+th{
+  text-align:left;padding:12px 16px;
+  font-weight:600;color:var(--accent-light);
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+td{
+  padding:10px 16px;
+  border-bottom:1px solid var(--border);
+  color:var(--text-dim);
+  vertical-align:top;
+}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(108,92,231,.04)}
+td:first-child{color:var(--text);font-weight:500}
+
+/* ===== Code ===== */
+pre{
+  background:var(--bg-code);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:20px;
+  overflow-x:auto;
+  font-family:var(--font-mono);
+  font-size:.78rem;
+  line-height:1.65;
+  color:var(--text-dim);
+  margin:16px 0;
+  tab-size:2;
+  max-width:100%;
+  white-space:pre-wrap;
+  word-wrap:break-word;
+  word-break:break-all;
+}
+code{
+  font-family:var(--font-mono);
+  font-size:.85em;
+  background:rgba(108,92,231,.12);
+  padding:2px 7px;
+  border-radius:4px;
+  color:var(--accent-light);
+}
+pre code{background:none;padding:0;color:inherit;font-size:inherit}
+
+/* ===== Tags / Pills ===== */
+.pill{
+  display:inline-block;
+  padding:3px 12px;
+  border-radius:999px;
+  font-size:.78rem;
+  font-weight:600;
+  margin:2px 4px 2px 0;
+}
+.pill.green{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,206,201,.25)}
+.pill.blue{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(116,185,255,.25)}
+.pill.purple{background:rgba(108,92,231,.15);color:var(--accent-light);border:1px solid rgba(108,92,231,.25)}
+.pill.orange{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(253,203,110,.25)}
+.pill.red{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,107,107,.25)}
+.pill.pink{background:rgba(253,121,168,.12);color:var(--pink);border:1px solid rgba(253,121,168,.25)}
+
+/* ===== Metric Cards ===== */
+.metrics{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;
+  margin:16px 0;
+}
+.metric{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:18px;text-align:center;
+}
+.metric .value{font-size:1.6rem;font-weight:800;color:#fff;margin-bottom:4px}
+.metric .label{font-size:.78rem;color:var(--text-muted)}
+
+/* ===== Flow Diagrams ===== */
+.flow{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  margin:16px 0;padding:20px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+.flow-node{
+  padding:10px 18px;
+  background:rgba(108,92,231,.12);
+  border:1px solid rgba(108,92,231,.3);
+  border-radius:var(--radius-sm);
+  font-size:.85rem;font-weight:600;color:var(--accent-light);
+  white-space:nowrap;
+}
+.flow-node.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.flow-arrow{color:var(--text-muted);font-size:1.2rem}
+
+/* ===== Lists ===== */
+ul,ol{padding-left:20px;margin:8px 0}
+li{margin-bottom:6px;color:var(--text-dim)}
+li strong{color:var(--text)}
+li::marker{color:var(--accent)}
+
+/* ===== Sidebar Nav (desktop) ===== */
+.sidebar{
+  position:fixed;top:0;left:0;
+  width:280px;height:100vh;
+  background:var(--bg-card);
+  border-right:1px solid var(--border);
+  padding:24px 0;
+  overflow-y:auto;
+  z-index:100;
+  transform:translateX(-100%);
+  transition:transform .3s ease;
+}
+.sidebar.open{transform:translateX(0)}
+.sidebar-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.5);
+  z-index:99;opacity:0;pointer-events:none;
+  transition:opacity .3s;
+}
+.sidebar-overlay.open{opacity:1;pointer-events:auto}
+.sidebar-title{
+  padding:0 20px 16px;font-size:.85rem;font-weight:700;
+  color:var(--accent-light);border-bottom:1px solid var(--border);
+  margin-bottom:8px;
+}
+.sidebar a{
+  display:block;padding:7px 20px;
+  font-size:.82rem;color:var(--text-dim);
+  transition:all .15s;
+  border-left:2px solid transparent;
+}
+.sidebar a:hover,.sidebar a.active{
+  color:var(--accent-light);
+  background:rgba(108,92,231,.06);
+  border-left-color:var(--accent);
+}
+.sidebar a.sub{padding-left:36px;font-size:.78rem}
+
+/* ===== Top bar ===== */
+.topbar{
+  position:fixed;top:0;left:0;right:0;
+  height:52px;
+  background:rgba(10,10,15,.85);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;
+  padding:0 20px;
+  z-index:90;
+  transition:box-shadow .3s;
+}
+.topbar.scrolled{box-shadow:0 2px 20px rgba(0,0,0,.4)}
+.topbar-burger{
+  width:36px;height:36px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;border-radius:8px;
+  transition:background .2s;
+  background:none;border:none;color:var(--text);font-size:1.2rem;
+}
+.topbar-burger:hover{background:var(--border)}
+.topbar-title{
+  margin-left:12px;font-size:.9rem;font-weight:700;color:var(--text);
+}
+.topbar-right{
+  margin-left:auto;display:flex;gap:8px;align-items:center;
+}
+.topbar-pill{
+  padding:4px 12px;border-radius:999px;font-size:.72rem;font-weight:600;
+  background:rgba(108,92,231,.15);color:var(--accent-light);
+  border:1px solid rgba(108,92,231,.25);
+}
+
+/* ===== Back to top ===== */
+.back-top{
+  position:fixed;bottom:28px;right:28px;
+  width:44px;height:44px;
+  border-radius:50%;
+  background:var(--accent);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;cursor:pointer;
+  opacity:0;transform:translateY(10px);
+  transition:all .3s;z-index:80;
+  border:none;box-shadow:0 4px 16px rgba(108,92,231,.4);
+}
+.back-top.show{opacity:1;transform:translateY(0)}
+.back-top:hover{background:#7c6ef0;transform:translateY(-2px)}
+
+/* ===== Architecture Diagram ===== */
+.arch-diagram{
+  display:grid;grid-template-columns:1fr;gap:12px;
+  margin:20px 0;
+}
+.arch-stage{
+  display:flex;align-items:stretch;gap:12px;
+}
+.arch-stage-label{
+  flex-shrink:0;width:140px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:.85rem;
+  border-radius:var(--radius-sm);
+  text-align:center;padding:12px;
+}
+.arch-stage-content{
+  flex:1;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:14px 18px;
+  font-size:.85rem;color:var(--text-dim);
+  line-height:1.6;
+}
+.arch-stage-content code{font-size:.8rem}
+.arch-connector{
+  display:flex;justify-content:center;
+  color:var(--text-muted);font-size:1.4rem;
+  padding:2px 0;
+}
+
+/* ===== Data Model ===== */
+.model-block{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  margin:16px 0;overflow:hidden;
+  min-width:0;max-width:100%;
+}
+.model-block-header{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 20px;
+  background:rgba(108,92,231,.08);
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  user-select:none;
+}
+.model-block-header h4{font-size:.95rem;font-weight:700;color:#fff;margin:0}
+.model-block-header .toggle{
+  margin-left:auto;color:var(--text-muted);
+  transition:transform .2s;font-size:.9rem;
+}
+.model-block-header.collapsed .toggle{transform:rotate(-90deg)}
+.model-block-body{padding:0 20px 16px;overflow:hidden;transition:max-height .3s ease;min-width:0}
+.model-block-body.collapsed{max-height:0 !important;padding:0 20px}
+
+/* ===== Persona cards ===== */
+.persona-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin:16px 0}
+.persona{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;
+  position:relative;overflow:hidden;
+}
+.persona::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+}
+.persona.p0::before{background:var(--green)}
+.persona.p1::before{background:var(--blue)}
+.persona.non::before{background:var(--text-muted)}
+.persona .persona-tag{
+  font-size:.72rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:8px;
+}
+.persona.p0 .persona-tag{color:var(--green)}
+.persona.p1 .persona-tag{color:var(--blue)}
+.persona.non .persona-tag{color:var(--text-muted)}
+.persona h4{font-size:1rem;font-weight:700;margin-bottom:8px;color:#fff}
+.persona p{font-size:.85rem;color:var(--text-dim);margin-bottom:4px}
+
+/* ===== Step cards (pipeline) ===== */
+.pipeline-steps{
+  display:flex;gap:2px;margin:16px 0;
+  overflow-x:auto;padding-bottom:4px;
+}
+.pipeline-step{
+  flex:1;min-width:120px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:16px;
+  text-align:center;position:relative;
+}
+.pipeline-step .step-num{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--accent);color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:700;margin-bottom:8px;
+}
+.pipeline-step .step-title{font-size:.82rem;font-weight:600;color:#fff;margin-bottom:4px}
+.pipeline-step .step-desc{font-size:.75rem;color:var(--text-muted)}
+
+/* ===== Responsive ===== */
+@media(max-width:640px){
+  .page-wrapper{padding:0 16px 80px}
+  .hero{padding:80px 0 40px}
+  .toc-grid{grid-template-columns:1fr}
+  .metrics{grid-template-columns:1fr 1fr}
+  .persona-grid{grid-template-columns:1fr}
+  .arch-stage{flex-direction:column}
+  .arch-stage-label{width:100%}
+  .pipeline-steps{flex-direction:column}
+  table{font-size:.8rem}
+  th,td{padding:8px 10px}
+}
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar" id="topbar">
+  <button class="topbar-burger" id="menuBtn" aria-label="Menu">☰</button>
+  <span class="topbar-title">短剧创作工具 v2.0</span>
+  <div class="topbar-right">
+    <span class="topbar-pill">PRD v2.0</span>
+    <span class="topbar-pill">立项评审稿</span>
+  </div>
+</div>
+
+<!-- Sidebar -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-title">📑 目录导航</div>
+  <a href="#sec0">0. 阅读指南</a>
+  <a href="#sec1">1. 产品定位</a>
+  <a href="#sec1-1" class="sub">1.1 一句话定位</a>
+  <a href="#sec1-2" class="sub">1.2 核心价值主张</a>
+  <a href="#sec1-3" class="sub">1.3 竞品差异</a>
+  <a href="#sec1-4" class="sub">1.4 目标用户</a>
+  <a href="#sec1-5" class="sub">1.5 北极星指标</a>
+  <a href="#sec2">2. 信息架构</a>
+  <a href="#sec2-1" class="sub">2.1 整体结构</a>
+  <a href="#sec2-2" class="sub">2.2 数据流向</a>
+  <a href="#sec2-3" class="sub">2.3 非线性回改</a>
+  <a href="#sec3">3. 核心数据模型</a>
+  <a href="#sec4">4. 阶段一：故事</a>
+  <a href="#sec5">5. 阶段二：剧组筹备会</a>
+  <a href="#sec6">6. 阶段三：开机拍摄</a>
+  <a href="#sec7">7. 阶段四：成片预览</a>
+  <a href="#sec8">8. 第 0 屏：项目库</a>
+  <a href="#sec9">9. 跨阶段机制</a>
+  <a href="#sec10">10. 状态机汇总</a>
+  <a href="#sec11">11. 关键技术决策</a>
+  <a href="#sec12">12. MVP 拆解</a>
+  <a href="#sec13">13. 风险与对策</a>
+  <a href="#sec14">14. 验收标准</a>
+  <a href="#sec15">15. 术语表</a>
+  <a href="#secA">附录 A：用户旅程图</a>
+  <a href="#secB">附录 B：Prompt 清单</a>
+</nav>
+
+<!-- Back to Top -->
+<button class="back-top" id="backTop" aria-label="Back to top">↑</button>
+
+<!-- Main Content -->
+<div class="page-wrapper" style="padding-top:72px">
+
+<!-- ===== HERO ===== -->
+<header class="hero">
+  <div class="hero-badge">🎬 PRD v2.0 · 立项评审稿</div>
+  <h1>短剧创作工具 v2.0<br>产品需求文档</h1>
+  <p class="subtitle">让没拍过短剧的人，点四下、等七分钟，做出一集可以直接发布的 AI 短剧。让会拍的人，五分钟做一集，十分钟做五个语种版本。</p>
+  <div class="hero-meta">
+    <span>📄 文档版本 v2.0</span>
+    <span>👥 受众：产品 / 设计 / 前端 / 后端 / 算法 / 测试</span>
+    <span>📅 2026-04</span>
+  </div>
+</header>
+
+<!-- ===== TOC ===== -->
+<nav class="toc">
+  <h2>📑 目录</h2>
+  <div class="toc-grid">
+    <a href="#sec0"><span class="num">0</span>阅读指南</a>
+    <a href="#sec1"><span class="num">1</span>产品定位</a>
+    <a href="#sec2"><span class="num">2</span>信息架构</a>
+    <a href="#sec3"><span class="num">3</span>核心数据模型</a>
+    <a href="#sec4"><span class="num">4</span>阶段一：故事</a>
+    <a href="#sec5"><span class="num">5</span>阶段二：剧组筹备会</a>
+    <a href="#sec6"><span class="num">6</span>阶段三：开机拍摄</a>
+    <a href="#sec7"><span class="num">7</span>阶段四：成片预览与一稿多投</a>
+    <a href="#sec8"><span class="num">8</span>第 0 屏：项目库</a>
+    <a href="#sec9"><span class="num">9</span>跨阶段机制</a>
+    <a href="#sec10"><span class="num">10</span>状态机汇总</a>
+    <a href="#sec11"><span class="num">11</span>关键技术决策</a>
+    <a href="#sec12"><span class="num">12</span>MVP 拆解</a>
+    <a href="#sec13"><span class="num">13</span>风险与对策</a>
+    <a href="#sec14"><span class="num">14</span>验收标准</a>
+    <a href="#sec15"><span class="num">15</span>术语表</a>
+    <a href="#secA"><span class="num">A</span>附录 A：用户旅程图</a>
+    <a href="#secB"><span class="num">B</span>附录 B：Prompt 清单</a>
+  </div>
+</nav>
+
+<!-- ===== 0. 阅读指南 ===== -->
+<section class="section" id="sec0">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:var(--accent);color:#fff">0</span> 阅读指南</h2>
+  <div class="highlight-box purple">
+    本 PRD 是从竞品（纳米 AI 短剧工具）的 7 步线性流水线重构而来。原版本的逻辑骨架是对的（资产库先行 + 非线性回改），但 UI 是为懂行的人设计的，新手转化率低。本版本把 <strong>7 步压成 4 阶段</strong>，在不牺牲专业能力的前提下大幅降低新手认知门槛，并加入一项关键差异化能力：<strong>一稿多投</strong>。
+  </div>
+  <p><strong>阅读顺序建议：</strong></p>
+  <ol>
+    <li>第 1 章 — 看清楚我们要做什么和为什么</li>
+    <li>第 2 章 — 看整体架构</li>
+    <li>第 3 章 — 看数据模型（工程的脊梁）</li>
+    <li>第 4-8 章 — 按阶段看交互和接口细节</li>
+    <li>第 9-12 章 — 跨阶段机制和工程考虑</li>
+    <li>第 13 章 — MVP 怎么砍刀</li>
+    <li>第 14 章 — 怎么验收</li>
+  </ol>
+</section>
+
+<!-- ===== 1. 产品定位 ===== -->
+<section class="section" id="sec1">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:linear-gradient(135deg,var(--green),var(--accent));color:#fff">1</span> 产品定位</h2>
+
+  <h3 id="sec1-1">1.1 一句话定位</h3>
+  <div class="quote">
+    让没拍过短剧的人，点四下、等七分钟，做出一集可以直接发抖音/红果/ReelShort 的 AI 短剧；让会拍的人，五分钟做一集，十分钟做五个语种版本。
+  </div>
+
+  <h3 id="sec1-2">1.2 核心价值主张</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin:16px 0">
+    <div class="card">
+      <div class="card-header"><span class="dot" style="background:var(--green)"></span>门槛低到底</div>
+      <p style="font-size:.85rem;color:var(--text-dim)">不需要懂分镜、不需要懂模型、不需要懂画面比例。会写故事就行，不会写故事 AI 帮你起头。</p>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="dot" style="background:var(--blue)"></span>资产复用强</div>
+      <p style="font-size:.85rem;color:var(--text-dim)">角色/场景/道具一次建库，跨镜头跨集数跨地域复用。</p>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="dot" style="background:var(--orange)"></span>非线性回改</div>
+      <p style="font-size:.85rem;color:var(--text-dim)">任何一步都能回去改，下游自动同步。</p>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="dot" style="background:var(--pink)"></span>一稿多投</div>
+      <p style="font-size:.85rem;color:var(--text-dim)">同一剧本一键生成国内、北美、东南亚、日韩、中东 5 个市场的本地化版本。<strong>所有竞品都没有。</strong></p>
+    </div>
+  </div>
+
+  <h3 id="sec1-3">1.3 与纳米 AI 7 步流水线的差异</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>维度</th><th>纳米原版</th><th>本产品</th></tr></thead>
+      <tbody>
+        <tr><td>步骤数</td><td>7 个独立 Tab</td><td><strong>4 个连续阶段</strong></td></tr>
+        <tr><td>首屏负担</td><td>全局设定要先选 6+ 个技术参数</td><td>4 行标签点 4 下，参数自动反推</td></tr>
+        <tr><td>剧本起点</td><td>空白编辑器</td><td>AI 预生成 3 个开场白可选</td></tr>
+        <tr><td>资产管理</td><td>独立 Tab "资产库"</td><td>伪装成"剧组筹备会"审片流程</td></tr>
+        <tr><td>分镜编辑</td><td>一屏摊开 10+ 控件</td><td>大预览 + 一句话改镜 + 高级折叠</td></tr>
+        <tr><td>视频/口型</td><td>Step 5 / Step 6 独立 Tab</td><td>折叠为镜头流水线的内部阶段</td></tr>
+        <tr><td>出海支持</td><td><span class="pill red">无</span></td><td><span class="pill green">一稿多投到 5 个市场</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="sec1-4">1.4 目标用户</h3>
+  <div class="persona-grid">
+    <div class="persona p0">
+      <div class="persona-tag">P0 主要用户 — 新手创作者</div>
+      <h4>短视频创作者</h4>
+      <p>看过短剧但没拍过，每天可投入 1-3 小时</p>
+      <p>对 AI 工具有基本使用经验（用过 ChatGPT / 即梦 / 可灵）</p>
+      <p>不懂镜头语言、不知道九宫格机位、不在乎模型策略</p>
+      <p><strong>核心诉求：</strong>做出能发出去、有人看的内容</p>
+    </div>
+    <div class="persona p1">
+      <div class="persona-tag">P1 次要用户 — 出海 MCN / 短剧工作室</div>
+      <h4>出海团队</h4>
+      <p>已有国内短剧拍摄经验</p>
+      <p>想低成本试水海外市场，但不懂当地文化</p>
+      <p><strong>核心诉求：</strong>同一剧本快速做多语种版本，看哪个市场跑得动</p>
+    </div>
+    <div class="persona non">
+      <div class="persona-tag">非目标用户</div>
+      <h4>专业影视团队</h4>
+      <p>院线级动画团队、广告 4A、专业影视公司</p>
+      <p>他们会用 Runway / Midjourney 配 After Effects，本工具的天花板对他们太低</p>
+    </div>
+  </div>
+
+  <h3 id="sec1-5">1.5 北极星指标与辅助指标</h3>
+  <div class="highlight-box green">
+    <strong>北极星：新用户首日完成首集发布率 (NU1D-Publish Rate)</strong><br>
+    新注册用户在 24 小时内完成"创建项目 → 完成阶段四 → 至少导出 1 次"的比例。
+  </div>
+  <div class="metrics">
+    <div class="metric"><div class="value" style="color:var(--green)">≥ 15%</div><div class="label">NU1D-Publish Rate</div></div>
+    <div class="metric"><div class="value" style="color:var(--blue)">≤ 12min</div><div class="label">首集创建到合成完成</div></div>
+    <div class="metric"><div class="value" style="color:var(--orange)">< 30%</div><div class="label">各阶段流失率上限</div></div>
+    <div class="metric"><div class="value" style="color:var(--pink)">≥ 8%</div><div class="label">一稿多投使用率</div></div>
+    <div class="metric"><div class="value" style="color:var(--accent-light)">< 20%</div><div class="label">高级设置打开率</div></div>
+  </div>
+</section>
+
+<!-- ===== 2. 信息架构 ===== -->
+<section class="section" id="sec2">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:linear-gradient(135deg,#74b9ff,#6c5ce7);color:#fff">2</span> 信息架构</h2>
+
+  <h3 id="sec2-1">2.1 整体结构（5 屏）</h3>
+  <div class="arch-diagram">
+    <div class="arch-stage">
+      <div class="arch-stage-label" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted)">第 0 屏<br>项目库</div>
+      <div class="arch-stage-content">新建 / 选既有项目</div>
+    </div>
+    <div class="arch-connector">▼</div>
+    <div class="arch-stage">
+      <div class="arch-stage-label" style="background:rgba(0,206,201,.12);border:1px solid rgba(0,206,201,.25);color:var(--green)">阶段一<br>故事</div>
+      <div class="arch-stage-content">
+        标签选择（类型 / 设定 / 背景 / 地域 / 受众）<br>
+        自动反推技术参数（画面比例 / 画风 / 选角 / 模型策略）<br>
+        AI 预生成开场白（3 选 1 起手）<br>
+        剧本编辑器
+      </div>
+    </div>
+    <div class="arch-connector">▼</div>
+    <div class="arch-stage">
+      <div class="arch-stage-label" style="background:rgba(116,185,255,.12);border:1px solid rgba(116,185,255,.25);color:var(--blue)">阶段二<br>剧组筹备会</div>
+      <div class="arch-stage-content">
+        剧本自动解析（LLM 抽取场景 / 角色 / 道具）<br>
+        资产卡网格（三类合一展示）<br>
+        单卡操作：换一张 / 微调 / 通过<br>
+        一致性机制：任意修改下游自动同步
+      </div>
+    </div>
+    <div class="arch-connector">▼</div>
+    <div class="arch-stage">
+      <div class="arch-stage-label" style="background:rgba(253,203,110,.12);border:1px solid rgba(253,203,110,.25);color:var(--orange)">阶段三<br>开机拍摄</div>
+      <div class="arch-stage-content">
+        镜头列表自动生成<br>
+        大预览框 + 镜头编辑面板<br>
+        自动开拍（流水线：分镜图 → 视频 → 配音口型）<br>
+        一句话改镜 + 高级调整<br>
+        横向时间线
+      </div>
+    </div>
+    <div class="arch-connector">▼</div>
+    <div class="arch-stage">
+      <div class="arch-stage-label" style="background:rgba(108,92,231,.12);border:1px solid rgba(108,92,231,.25);color:var(--accent-light)">阶段四<br>成片预览</div>
+      <div class="arch-stage-content">
+        9:16 播放器（整集 loop 播放）<br>
+        片头 / 字幕 / BGM / 片尾配置<br>
+        导出三件套（竖版 / 横版 / 封面）<br>
+        <strong>一稿多投到其他地域市场</strong>
+      </div>
+    </div>
+  </div>
+
+  <h3 id="sec2-2">2.2 阶段间数据流向</h3>
+  <pre><code>[阶段一]
+TagSet ──┐
+         ├──→ InferredConfig（反推参数）─────┐
+Script ──┼──→ ParsedAssets（解析出资产）───┐ │
+         │                                │ │
+         ▼                                ▼ ▼
+                              [阶段二]
+                              AssetLibrary { scenes, chars, props }
+                                              │
+                                              ▼
+                              [阶段三]
+                              Shot[]（引用 AssetLibrary 中的 id）
+                              ShotPipeline（image → video → audio）
+                                              │
+                                              ▼
+                              [阶段四]
+                              MasterCut（拼接 + 字幕 + BGM + 片头尾）
+                                              │
+                                              ▼
+                              ExportArtifact[]（vert / horz / cover）
+                                              │
+                                              ▼
+                              RegionVariant[]（一稿多投）</code></pre>
+
+  <h3 id="sec2-3">2.3 非线性回改原则</h3>
+  <div class="highlight-box orange">
+    任何阶段都能跳回上游修改，工程层面必须实现<strong>失效传播</strong>。
+  </div>
+  <ul>
+    <li>改 TagSet → InferredConfig 重算 → 用户可选是否重生成所有资产</li>
+    <li>改场景资产 → 引用该场景的所有 Shot 自动标记为 <code>stale</code>，提示用户重生成</li>
+    <li>改某 Shot 的画面描述 → 该 Shot 的 image / video / audio 全部置为 <code>pending</code></li>
+    <li>改某 Shot 的图 → 该 Shot 的 video / audio 置为 <code>pending</code>（下游依赖）</li>
+    <li>改某 Shot 的视频 → 该 Shot 的 audio 置为 <code>pending</code></li>
+  </ul>
+</section>
+
+<!-- ===== 3. 核心数据模型 ===== -->
+<section class="section" id="sec3">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:linear-gradient(135deg,#fd79a8,#e17055);color:#fff">3</span> 核心数据模型</h2>
+  <p style="color:var(--text-dim);margin-bottom:16px">以 TypeScript 风格表达。所有 id 默认 ULID，所有时间戳默认 ISO 8601。点击展开/折叠。</p>
+
+  <div class="model-block">
+    <div class="model-block-header" onclick="toggleModel(this)">
+      <span class="pill purple">核心</span>
+      <h4>3.1 Project（项目）</h4>
+      <span class="toggle">▼</span>
+    </div>
+    <div class="model-block-body">
+      <pre><code>interface Project {
+  id: string
+  ownerId: string
+  title: string                    // 默认是剧本第一句的前 12 个字
+  status: ProjectStatus
+  createdAt: string
+  updatedAt: string
+  lastEnteredStage: 1 | 2 | 3 | 4
+
+  // 阶段产出
+  tagSet: TagSet
+  inferredConfig: InferredConfig
+  script: Script
+  assetLibrary: AssetLibrary
+  shots: Shot[]
+  masterCut: MasterCut | null
+  variants: RegionVariant[]        // 一稿多投产物
+
+  // 元数据
+  costSpent: number
+  estimatedCostRemaining: number
+}
+
+type ProjectStatus =
+  | 'draft'           // 阶段一未完成
+  | 'casting'         // 阶段二中
+  | 'shooting'        // 阶段三中
+  | 'mastering'       // 阶段四中
+  | 'published'       // 至少导出过一次
+  | 'archived'</code></pre>
+    </div>
+  </div>
+
+  <div class="model-block">
+    <div class="model-block-header" onclick="toggleModel(this)">
+      <span class="pill green">阶段一</span>
+      <h4>3.2 TagSet（标签组合）</h4>
+      <span class="toggle">▼</span>
+    </div>
+    <div class="model-block-body">
+      <pre><code>interface TagSet {
+  type: TypeTag                    // 19 选 1
+  setting: SettingTag              // 20 选 1
+  world: WorldTag                  // 7 选 1
+  region: RegionTag                // 7 选 1
+  audience: 'male' | 'female' | 'all'
+}
+
+type TypeTag =
+  | '穿越' | '逆袭' | '重生' | '爱情' | '玄幻' | '现代言情' | '总裁'
+  | '虐恋' | '甜宠' | '神豪' | '女性成长' | '古风权谋' | '家庭伦理'
+  | '复仇' | '悬疑推理' | '古风言情' | '生活' | '刑侦' | '恐怖'
+
+type SettingTag =
+  | '大女主' | '马甲' | '小人物' | '无敌神医' | '草根' | '扮猪吃虎'
+  | '青梅竹马' | '打脸虐渣' | '先婚后爱' | '都市修仙' | '闪婚' | '萌宝'
+  | '豪门恩怨' | '强者回归' | '破镜重圆' | '欢喜冤家' | '赘婿逆袭'
+  | '暗恋成真' | '亲情' | '传承觉醒'
+
+type WorldTag = '古风' | '架空' | '民国' | '乡村' | '现代' | '星际' | '都市'
+type RegionTag = '国内' | '北美' | '欧洲' | '东南亚' | '日韩' | '中东' | '拉美'</code></pre>
+    </div>
+  </div>
+
+  <div class="model-block">
+    <div class="model-block-header" onclick="toggleModel(this)">
+      <span class="pill green">阶段一</span>
+      <h4>3.3 InferredConfig（反推技术参数）</h4>
+      <span class="toggle">▼</span>
+    </div>
+    <div class="model-block-body">
+      <pre><code>interface InferredConfig {
+  aspectRatio: AspectRatio          // '9:16' | '16:9' | '4:3' | ...
+  artStyle: ArtStyle                // 'modern_realism' | 'ink_wash' | ...
+  modelStrategy: 'cost_first' | 'quality_first'
+  shotMode: 'single' | 'nine_grid'
+  castEthnicity: CastEthnicity
+  language: string                  // ISO 639-1
+  targetPlatforms: PlatformId[]
+  episodeLengthSec: number          // 60 | 75 | 90
+  recommendedShotCount: number      // 8-15
+  overrides?: Partial&lt;InferredConfig&gt;
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="model-block">
+    <div class="model-block-header" onclick="toggleModel(this)">
+      <span class="pill green">阶段一</span>
+      <h4>3.5 Script（剧本）</h4>
+      <span class="toggle">▼</span>
+    </div>
+    <div class="model-block-body">
+      <pre><code>interface Script {
+  id: string
+  rawText: string                  // 用户最终的剧本全文
+  estimatedDurationSec: number     // 中文 4 字/秒，英文 2.5 词/秒
+  characterCount: number
+  wordLimit: number                // 默认 10000
+  history: ScriptVersion[]
+}
+
+interface ScriptVersion {
+  id: string
+  rawText: string
+  savedAt: string
+  source: 'auto_save' | 'manual_save' | 'opening_pick' | 'ai_extend'
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="model-block">
+    <div class="model-block-header" onclick="toggleModel(this)">
+      <span class="pill blue">阶段二</span>
+      <h4>3.6 AssetLibrary（资产库）</h4>
+      <span class="toggle">▼</span>
+    </div>
+    <div class="model-block-body">
+      <pre><code>interface AssetLibrary {
+  scenes: SceneAsset[]
+  characters: CharacterAsset[]
+  props: PropAsset[]
+}
+
+interface AssetBase {
+  id: string
+  name: string
+  description: string
+  imageUrl?: string
+  imagePromptUsed?: string
+  status: 'pending' | 'generating' | 'ready' | 'failed'
+  approvedByUser: boolean
+  generatedAt?: string
+  variantOf?: string               // 地域 variant 指向源 asset id
+}
+
+interface CharacterAsset extends AssetBase {
+  kind: 'character'
+  tier: 'lead' | 'antagonist' | 'support' | 'extra'
+  age?: string
+  gender?: 'male' | 'female' | 'other'
+  variantGroup?: string            // 同一角色不同状态分组
+  consistencyToken?: string        // IP-Adapter / LoRA
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="model-block">
+    <div class="model-block-header" onclick="toggleModel(this)">
+      <span class="pill orange">阶段三</span>
+      <h4>3.7 Shot（分镜）</h4>
+      <span class="toggle">▼</span>
+    </div>
+    <div class="model-block-body">
+      <pre><code>interface Shot {
+  id: string
+  number: string                   // 'S01' ... 'S12'
+  order: number
+
+  // 引用资产库
+  sceneRef: string
+  characterRefs: string[]
+  propRefs: string[]
+
+  // 内容
+  description: string              // 画面描述，prompt 主体
+  dialogue: string                 // 台词
+  cameraDirection?: string         // 'close-up' | 'wide' | ...
+  durationSec: number              // 默认 5-8s
+
+  // 流水线状态
+  pipeline: ShotPipeline
+
+  // 输出
+  imageUrl?: string
+  videoUrl?: string
+  audioUrl?: string
+  finalClipUrl?: string
+}
+
+interface ShotPipeline {
+  image: PipelineStage
+  video: PipelineStage
+  audio: PipelineStage
+}
+
+interface PipelineStage {
+  status: 'pending' | 'queued' | 'rendering' | 'done' | 'failed' | 'stale'
+  jobId?: string
+  cost?: number
+  modelUsed?: string
+  attemptCount: number
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="model-block">
+    <div class="model-block-header" onclick="toggleModel(this)">
+      <span class="pill purple">阶段四</span>
+      <h4>3.8 MasterCut（成片配置）</h4>
+      <span class="toggle">▼</span>
+    </div>
+    <div class="model-block-body">
+      <pre><code>interface MasterCut {
+  id: string
+  projectId: string
+  intro: IntroSegment[]            // brand_logo | title_card | cold_open
+  outro: OutroSegment[]            // next_episode_teaser | follow_cta | credits
+  subtitlesEnabled: boolean
+  subtitleStyle: SubtitleStyle
+  bgmEnabled: boolean
+  bgmTrack?: string
+  renderedUrl?: string             // 合成后的 mp4
+  durationSec: number
+  renderHash?: string              // 增量重渲染指纹
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="model-block">
+    <div class="model-block-header" onclick="toggleModel(this)">
+      <span class="pill pink">一稿多投</span>
+      <h4>3.9 RegionVariant（一稿多投）</h4>
+      <span class="toggle">▼</span>
+    </div>
+    <div class="model-block-body">
+      <pre><code>interface RegionVariant {
+  id: string
+  parentProjectId: string
+  region: RegionTag
+
+  // 复用自父项目
+  scriptStructure: ShotStructureRef[]  // 镜头骨架
+
+  // 重生成的内容
+  localizedScript: Script
+  localizedAssetLibrary: AssetLibrary
+  localizedShots: Shot[]
+  localizedMasterCut: MasterCut
+
+  targetConfig: InferredConfig
+  status: VariantStatus               // pending → translating → casting → shooting → mastering → done
+  estimatedCost: number
+  actualCost?: number
+}
+
+interface ShotStructureRef {
+  parentShotId: string
+  beatType: 'hook' | 'setup' | 'conflict' | 'twist' | 'cliffhanger'
+  emotionalIntensity: 1 | 2 | 3 | 4 | 5
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4. 阶段一 ===== -->
+<section class="section" id="sec4">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:var(--green);color:#000">4</span> 阶段一：故事</h2>
+
+  <h3>4.1 标签选择器</h3>
+  <p>4 行标签水平展示：</p>
+  <div style="margin:12px 0">
+    <div style="margin-bottom:8px"><strong style="font-size:.8rem;color:var(--text-muted)">类型</strong><br>
+      <span class="pill green">穿越</span><span class="pill green">逆袭</span><span class="pill green">重生</span><span class="pill green">爱情</span><span class="pill green">玄幻</span><span class="pill green">现代言情</span><span class="pill green">总裁</span><span class="pill green">虐恋</span><span class="pill green">甜宠</span><span class="pill green">神豪</span><span class="pill green">女性成长</span><span class="pill green">古风权谋</span><span class="pill green">家庭伦理</span><span class="pill green">复仇</span><span class="pill green">悬疑推理</span><span class="pill green">古风言情</span><span class="pill green">生活</span><span class="pill green">刑侦</span><span class="pill green">恐怖</span>
+    </div>
+    <div style="margin-bottom:8px"><strong style="font-size:.8rem;color:var(--text-muted)">设定</strong><br>
+      <span class="pill green">大女主</span><span class="pill green">马甲</span><span class="pill green">小人物</span><span class="pill green">赘婿逆袭</span><span class="pill green">扮猪吃虎</span><span class="pill green">打脸虐渣</span><span class="pill green">先婚后爱</span><span class="pill green">豪门恩怨</span><span class="pill green">强者回归</span><span class="pill green">...</span>
+    </div>
+    <div style="margin-bottom:8px"><strong style="font-size:.8rem;color:var(--text-muted)">背景</strong><br>
+      <span class="pill green">古风</span><span class="pill green">架空</span><span class="pill green">民国</span><span class="pill green">乡村</span><span class="pill green">现代</span><span class="pill green">星际</span><span class="pill green">都市</span>
+    </div>
+    <div><strong style="font-size:.8rem;color:var(--text-muted)">地域（市场决策）</strong><br>
+      <span class="pill blue">国内</span><span class="pill blue">北美</span><span class="pill blue">欧洲</span><span class="pill blue">东南亚</span><span class="pill blue">日韩</span><span class="pill blue">中东</span><span class="pill blue">拉美</span>
+    </div>
+  </div>
+  <div class="highlight-box purple">
+    <strong>关键设计：</strong>前 3 行用绿色标签（创作决策），第 4 行用蓝色标签（市场决策）——视觉上区分"创作"和"市场"。每行单选，切换立即触发 InferredConfig 重算。
+  </div>
+
+  <h3>4.2 标签到 InferredConfig 的反推规则</h3>
+  <h4>artStyle（由 world 决定）</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>world</th><th>artStyle</th></tr></thead>
+      <tbody>
+        <tr><td>古风</td><td><code>ink_wash</code></td></tr>
+        <tr><td>架空</td><td><code>fantasy_concept</code></td></tr>
+        <tr><td>民国</td><td><code>vintage_sepia</code></td></tr>
+        <tr><td>乡村</td><td><code>rural_natural</code></td></tr>
+        <tr><td>现代</td><td><code>modern_realism</code></td></tr>
+        <tr><td>星际</td><td><code>cyberpunk_neon</code></td></tr>
+        <tr><td>都市</td><td><code>urban_realism</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>modelStrategy（由 type 决定）</h4>
+  <div style="margin:8px 0">
+    <span class="pill purple">quality_first</span> 玄幻 / 古风权谋 / 古风言情 / 悬疑推理 / 刑侦 / 恐怖<br>
+    <span class="pill green">cost_first</span> 生活 / 家庭伦理 / 现代言情 / 其余（默认偏便宜）
+  </div>
+
+  <h4>targetPlatforms + episodeLengthSec（由 region 决定）</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>region</th><th>platforms</th><th>时长</th><th>语言</th><th>选角</th></tr></thead>
+      <tbody>
+        <tr><td>国内</td><td>douyin, hongguo</td><td>75s</td><td>zh</td><td>east_asian</td></tr>
+        <tr><td>北美</td><td>reelshort, dramabox</td><td>90s</td><td>en</td><td>caucasian</td></tr>
+        <tr><td>欧洲</td><td>reelshort, goodshort</td><td>90s</td><td>en</td><td>european</td></tr>
+        <tr><td>东南亚</td><td>tiktok_id, wetv</td><td>60s</td><td>id</td><td>southeast_asian</td></tr>
+        <tr><td>日韩</td><td>tiktok_jp, bump</td><td>60s</td><td>ja</td><td>japanese_korean</td></tr>
+        <tr><td>中东</td><td>shortmax, yoozoo_mena</td><td>90s</td><td>ar</td><td>middle_eastern</td></tr>
+        <tr><td>拉美</td><td>dramabox, flextv</td><td>90s</td><td>es</td><td>latino</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><code>recommendedShotCount = Math.round(episodeLengthSec / 7)</code>，每镜约 7 秒。</p>
+
+  <h3>4.3 开场白预生成</h3>
+  <p>用户每次切换标签组合，后台异步调用 LLM 生成 3 个完全不同的开场白，缓存 5 分钟。超时 8 秒降级为模板兜底文案。</p>
+
+  <h3>4.4 参考剧库</h3>
+  <div class="highlight-box blue">
+    <strong>为什么重要：</strong>出海创作者最大的盲点是用国内套路拍海外剧。让他在选完地域的瞬间就能看到"哦原来北美在看狼人吸血鬼，不是赘婿"，胜过任何教程。
+  </div>
+
+  <h3>4.5 剧本编辑器</h3>
+  <ul>
+    <li>富文本编辑器，支持撤销/重做/复制/清空</li>
+    <li>自动保存（每 3 秒 debounced）</li>
+    <li>字数计数（默认上限 10000）</li>
+    <li>"AI 续写"按钮：基于当前剧本调用 LLM 生成接下来 200-300 字</li>
+    <li>导入剧本功能：.txt / .md / .docx</li>
+  </ul>
+
+  <h3>4.7 阶段一 API</h3>
+  <pre><code>POST   /api/v1/projects                       创建新项目
+PATCH  /api/v1/projects/:id/tags              更新标签
+POST   /api/v1/projects/:id/openings/generate 生成开场白
+PATCH  /api/v1/projects/:id/script            保存剧本
+POST   /api/v1/projects/:id/script/extend     AI 续写
+POST   /api/v1/projects/:id/script/import     导入外部剧本
+GET    /api/v1/references?region=xx&type=xx   参考剧库
+PATCH  /api/v1/projects/:id/config/override   高级设置覆盖</code></pre>
+</section>
+
+<!-- ===== 5. 阶段二 ===== -->
+<section class="section" id="sec5">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:var(--blue);color:#000">5</span> 阶段二：剧组筹备会</h2>
+
+  <h3>5.1 剧本解析</h3>
+  <p>用户点"下一步"时，后端调用 LLM 解析剧本，识别出所有场景、角色、道具。5-15 秒完成。</p>
+
+  <h3>5.2 资产卡组件</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>类型</th><th>卡片宽高比</th><th>视觉权重</th></tr></thead>
+      <tbody>
+        <tr><td>场景</td><td>4:3</td><td>大卡片，4 列网格</td></tr>
+        <tr><td>角色</td><td>3:4</td><td>大卡片，4 列网格</td></tr>
+        <tr><td>道具</td><td>横向 chip</td><td>极小，inline 排列</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>资产卡状态机</h4>
+  <pre><code>pending ──[进入阶段二]──> generating
+generating ──[成功]──> ready
+generating ──[失败]──> failed
+ready ──[通过]──> approved (布尔标记，不是状态)
+ready ──[换一张/微调]──> generating
+failed ──[重试]──> generating</code></pre>
+  <div class="highlight-box green">
+    <strong>关键决策：</strong><code>approved</code> 是独立布尔标记，不是状态机的一个状态。用户即使没有审核完，也能跳到阶段三。审核是可选精修，不是必经卡口。
+  </div>
+
+  <h3>5.3 资产生成 Pipeline</h3>
+  <ul>
+    <li>同一项目内最多 4 个并发生成任务</li>
+    <li>每个资产生成完立即通过 WebSocket 推送给前端</li>
+    <li>前端按事件逐一替换占位卡为成品卡（进度感）</li>
+  </ul>
+
+  <h3>5.4 一致性机制</h3>
+  <div class="highlight-box orange">
+    <strong>工程上最难的一块。</strong>"一处修改全剧同步"听起来简单，实现需要角色一致性 token（IP-Adapter face embedding 或 LoRA 权重）。<br><br>
+    <strong>MVP 降级：</strong>如果 P0 来不及做，可以接受"角色脸会跑偏"的事实，UI 上不主动承诺一致性。
+  </div>
+
+  <h3>5.6 阶段二 API</h3>
+  <pre><code>POST   /api/v1/projects/:id/script/parse           剧本解析
+GET    /api/v1/projects/:id/assets                  获取资产库
+POST   /api/v1/assets/:assetId/regenerate           换一张
+PATCH  /api/v1/assets/:assetId                      微调
+POST   /api/v1/assets/:assetId/approve              通过
+POST   /api/v1/projects/:id/assets/approve-all      全部通过
+POST   /api/v1/projects/:id/region/switch           地域切换
+WS     /api/v1/projects/:id/events                  实时进度推送</code></pre>
+</section>
+
+<!-- ===== 6. 阶段三 ===== -->
+<section class="section" id="sec6">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:var(--orange);color:#000">6</span> 阶段三：开机拍摄</h2>
+
+  <h3>6.1 镜头数据初始化</h3>
+  <p>进入阶段三时，后端基于剧本 + 资产库调用 LLM 生成镜头列表。所有 Shot 的 pipeline 状态为 <code>pending</code>。</p>
+
+  <h3>6.2 自动开拍调度器</h3>
+  <div class="highlight-box purple">
+    <strong>流水线并行：</strong>S01 在做 video 的同时，S02 在做 image，S03 在排队。这不是简单串行，而是 3-stage pipeline parallelism。
+  </div>
+  <div class="pipeline-steps">
+    <div class="pipeline-step">
+      <div class="step-num">1</div>
+      <div class="step-title">分镜图</div>
+      <div class="step-desc">Image Generation</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">2</div>
+      <div class="step-title">视频</div>
+      <div class="step-desc">Video Generation</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">3</div>
+      <div class="step-title">配音口型</div>
+      <div class="step-desc">Audio + Lip Sync</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">4</div>
+      <div class="step-title">合成</div>
+      <div class="step-desc">Final Clip Merge</div>
+    </div>
+  </div>
+
+  <h3>6.4 一句话改镜</h3>
+  <div class="highlight-box green">
+    <strong>这是阶段三的主路径，80% 的用户修改请求通过这一个输入框完成。</strong><br>
+    用户写自然语言如"眼神再凶一点"或"换个机位拍背影"，后端调 LLM 重写 description，然后重跑整个 pipeline。
+  </div>
+
+  <h3>6.5 高级调整面板</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>按钮</th><th>触发动作</th></tr></thead>
+      <tbody>
+        <tr><td>调整构图</td><td>4-6 种构图预设（推近/拉远/低角度/俯拍/过肩...），点选重生成</td></tr>
+        <tr><td>角色站位</td><td>拖拽改变角色在画面中的位置</td></tr>
+        <tr><td>改台词</td><td>文本编辑器，只重生成 audio，不重生成 image/video</td></tr>
+        <tr><td>九宫格机位</td><td>一次性生成 9 个不同机位备选图，用户挑一张</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>6.7 阶段三 API</h3>
+  <pre><code>POST   /api/v1/projects/:id/shots/generate         生成镜头列表
+GET    /api/v1/projects/:id/shots                  获取镜头
+POST   /api/v1/projects/:id/shoot/start            自动开拍
+POST   /api/v1/shots/:shotId/regenerate            一句话改镜
+POST   /api/v1/shots/:shotId/composition           调整构图
+PATCH  /api/v1/shots/:shotId/dialogue              改台词
+POST   /api/v1/shots/:shotId/nine-grid             九宫格机位
+WS     /api/v1/projects/:id/events                 流水线进度推送</code></pre>
+</section>
+
+<!-- ===== 7. 阶段四 ===== -->
+<section class="section" id="sec7">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:var(--accent);color:#fff">7</span> 阶段四：成片预览与一稿多投</h2>
+
+  <h3>7.1 成片合成引擎</h3>
+  <p>每次用户改任何配置都 debounced 5 秒后触发后台渲染。<code>renderHash</code> 用于增量重渲染——只是字幕变了可以只重做字幕轨。</p>
+
+  <h3>7.4 导出三件套</h3>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0">
+    <div class="card" style="text-align:center">
+      <div style="font-size:2rem;margin-bottom:8px">📱</div>
+      <div style="font-weight:700;margin-bottom:4px">竖版正片</div>
+      <div style="font-size:.8rem;color:var(--text-muted)">1080×1920 MP4<br>H.264 + AAC 128k</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:2rem;margin-bottom:8px">🖥️</div>
+      <div style="font-weight:700;margin-bottom:4px">横版重剪</div>
+      <div style="font-size:.8rem;color:var(--text-muted)">1920×1080 MP4<br>竖版居中 + 高斯模糊</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:2rem;margin-bottom:8px">🖼️</div>
+      <div style="font-weight:700;margin-bottom:4px">封面三件套</div>
+      <div style="font-size:.8rem;color:var(--text-muted)">竖封 / 横封 / 方封<br>烫金标题 overlay</div>
+    </div>
+  </div>
+
+  <h3>7.5 一稿多投架构</h3>
+  <div class="highlight-box pink" style="background:rgba(253,121,168,.08);border-left-color:var(--pink)">
+    <strong>核心思路：</strong>RegionVariant 不是简单地"再做一遍"，而是<strong>只重做应该重做的层</strong>。
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>层级</th><th>是否重生成</th><th>原因</th></tr></thead>
+      <tbody>
+        <tr><td>剧本骨架（节奏点 + 情绪曲线）</td><td><span class="pill green">否</span></td><td>用户的原创结构</td></tr>
+        <tr><td>剧本台词</td><td><span class="pill red">是</span></td><td>翻译 + 文化本地化</td></tr>
+        <tr><td>角色资产</td><td><span class="pill red">是</span></td><td>选角风格变了</td></tr>
+        <tr><td>场景资产</td><td><span class="pill orange">部分</span></td><td>"婚宴大厅"通用；"四合院"→"mansion"</td></tr>
+        <tr><td>道具资产</td><td><span class="pill orange">部分</span></td><td>同上</td></tr>
+        <tr><td>Shot 列表</td><td><span class="pill orange">复用结构</span></td><td>镜号和节奏不变，prompt 重写</td></tr>
+        <tr><td>镜头流水线产物</td><td><span class="pill red">是</span></td><td>所有视频要重新跑</td></tr>
+        <tr><td>MasterCut 配置</td><td><span class="pill orange">部分</span></td><td>时长按目标地域调</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>一稿多投触发流程</h4>
+  <div class="pipeline-steps" style="flex-wrap:wrap">
+    <div class="pipeline-step"><div class="step-num">A</div><div class="step-title">LLM 本地化</div><div class="step-desc">翻译 + 文化替换</div></div>
+    <div class="pipeline-step"><div class="step-num">B</div><div class="step-title">资产判断</div><div class="step-desc">哪些需要重生成</div></div>
+    <div class="pipeline-step"><div class="step-num">C</div><div class="step-title">批量生成</div><div class="step-desc">新选角新场景</div></div>
+    <div class="pipeline-step"><div class="step-num">D</div><div class="step-title">重写 Shot</div><div class="step-desc">复用结构换内容</div></div>
+    <div class="pipeline-step"><div class="step-num">E</div><div class="step-title">自动开拍</div><div class="step-desc">跑完整流水线</div></div>
+    <div class="pipeline-step"><div class="step-num">F</div><div class="step-title">合成成片</div><div class="step-desc">按目标规格输出</div></div>
+  </div>
+
+  <h3>7.6 阶段四 API</h3>
+  <pre><code>GET    /api/v1/projects/:id/cut                       获取 MasterCut
+PATCH  /api/v1/projects/:id/cut                       更新配置
+POST   /api/v1/projects/:id/cut/render                触发渲染
+POST   /api/v1/projects/:id/cut/export                导出
+
+POST   /api/v1/projects/:id/variants                  创建 RegionVariant
+GET    /api/v1/projects/:id/variants                  列出所有变体
+GET    /api/v1/variants/:id                           变体详情
+WS     /api/v1/variants/:id/events                    变体生成进度推送</code></pre>
+</section>
+
+<!-- ===== 8. 第 0 屏 ===== -->
+<section class="section" id="sec8">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:var(--text-muted);color:#fff">8</span> 第 0 屏：项目库</h2>
+
+  <h3>8.1 列表展示</h3>
+  <ul>
+    <li><strong>网格视图（默认）</strong>：4:3 卡片，封面 + 标题 + 状态 pill + 进度条 + 标签 chip</li>
+    <li><strong>列表视图</strong>：每行一个项目，带更多元数据</li>
+  </ul>
+
+  <h3>8.2 创建新项目</h3>
+  <p>"+ 新建项目"按钮，直接进入阶段一。P1 功能：项目模板（运营预置样板项目）。</p>
+
+  <h3>8.3 项目操作</h3>
+  <p>重命名 / 复制（复制 TagSet + Script，不复制资产和镜头） / 导出 PRJ（P2） / 归档 / 删除</p>
+
+  <h3>8.4 API</h3>
+  <pre><code>GET    /api/v1/projects                 列出项目
+POST   /api/v1/projects                 新建
+PATCH  /api/v1/projects/:id             重命名等
+DELETE /api/v1/projects/:id             删除
+POST   /api/v1/projects/:id/duplicate   复制</code></pre>
+</section>
+
+<!-- ===== 9. 跨阶段机制 ===== -->
+<section class="section" id="sec9">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:linear-gradient(135deg,var(--orange),var(--red));color:#fff">9</span> 跨阶段机制</h2>
+
+  <h3>9.1 失效传播</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>修改的字段</th><th>受影响的下游</th><th>处理</th></tr></thead>
+      <tbody>
+        <tr><td>TagSet</td><td>InferredConfig</td><td>自动重算</td></tr>
+        <tr><td>InferredConfig.castEthnicity</td><td>所有 Character 资产</td><td>提示用户重生成</td></tr>
+        <tr><td>InferredConfig.artStyle</td><td>所有 Scene 资产</td><td>提示用户重生成</td></tr>
+        <tr><td>Script.rawText</td><td>Shot 列表 + 资产识别</td><td>弹框："剧本变了，要重新解析吗？"</td></tr>
+        <tr><td>Asset.imageUrl</td><td>引用该资产的 Shot pipeline.image</td><td>自动置 stale</td></tr>
+        <tr><td>Shot.description</td><td>该 Shot 的 image/video/audio</td><td>自动置 pending</td></tr>
+        <tr><td>Shot.dialogue</td><td>该 Shot 的 audio</td><td>自动置 pending</td></tr>
+        <tr><td>MasterCut config</td><td>renderedUrl</td><td>debounced 重渲染</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="highlight-box red">
+    <strong>关键原则：</strong>
+    <ol style="margin-top:8px">
+      <li><strong>不静默重生成</strong>——需要调用模型的失效都应提示用户确认（生成是付费动作）</li>
+      <li><strong>Stale 可视化</strong>——虚线边框 + 黄色"已过期"角标</li>
+      <li><strong>批量重生成</strong>——用户可"一键更新所有过期内容"</li>
+    </ol>
+  </div>
+
+  <h3>9.2 自动保存与版本快照</h3>
+  <ul>
+    <li>任何输入框修改 debounced 1 秒自动保存</li>
+    <li>每次重大动作生成 ProjectVersion 快照</li>
+    <li>快照保存最近 20 个，允许回滚</li>
+  </ul>
+
+  <h3>9.3 LLM 调用统一封装</h3>
+  <p>所有 LLM 调用走内部 <code>LLMGateway</code> 服务：厂商抽象、Prompt 版本化、Token 计费、失败重试 + 降级、Response schema validation。</p>
+
+  <h3>9.5 积分系统</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>动作</th><th>积分</th></tr></thead>
+      <tbody>
+        <tr><td>LLM 短调用（开场白）</td><td>1</td></tr>
+        <tr><td>LLM 长上下文调用（剧本解析/本地化）</td><td>5-10</td></tr>
+        <tr><td>图像生成（便宜模型）</td><td>2</td></tr>
+        <tr><td>图像生成（贵模型）</td><td>8</td></tr>
+        <tr><td>视频生成（5s, 便宜）</td><td>15</td></tr>
+        <tr><td>视频生成（5s, 贵）</td><td>50</td></tr>
+        <tr><td>配音对口型</td><td>5</td></tr>
+        <tr><td>成片渲染</td><td>3</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 10. 状态机汇总 ===== -->
+<section class="section" id="sec10">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:linear-gradient(135deg,#00cec9,#74b9ff);color:#000">10</span> 状态机汇总</h2>
+
+  <h3>10.1 Project 生命周期</h3>
+  <pre><code>draft ──[完成阶段一]──> casting
+casting ──[进入阶段三]──> shooting
+shooting ──[进入阶段四]──> mastering
+mastering ──[导出至少 1 次]──> published
+任意状态 ──[user archives]──> archived
+任意状态 ──[user back to stage 1]──> draft (询问是否清理下游)</code></pre>
+
+  <h3>10.3 ShotPipeline 生命周期</h3>
+  <pre><code>pending ──[scheduler 选中]──> queued
+queued ──[worker 拉取]──> rendering
+rendering ──[完成]──> done
+rendering ──[失败]──> failed
+done ──[上游修改]──> stale
+stale ──[用户确认]──> queued
+failed ──[用户重试]──> queued
+
+依赖关系:
+  video 进入 queued 前提: image.status == done
+  audio 进入 queued 前提: dialogue 非空</code></pre>
+
+  <h3>10.4 RegionVariant 生命周期</h3>
+  <div class="flow">
+    <div class="flow-node">pending</div><span class="flow-arrow">→</span>
+    <div class="flow-node">translating</div><span class="flow-arrow">→</span>
+    <div class="flow-node">casting</div><span class="flow-arrow">→</span>
+    <div class="flow-node">shooting</div><span class="flow-arrow">→</span>
+    <div class="flow-node">mastering</div><span class="flow-arrow">→</span>
+    <div class="flow-node active">done</div>
+  </div>
+</section>
+
+<!-- ===== 11. 关键技术决策 ===== -->
+<section class="section" id="sec11">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:linear-gradient(135deg,#fd79a8,#e17055);color:#fff">11</span> 关键技术决策</h2>
+
+  <h3>11.1 前端</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:12px 0">
+    <div class="card"><div class="card-header">框架</div><p style="font-size:.85rem;color:var(--text-dim)">Next.js (App Router) + React 18+ + TypeScript</p></div>
+    <div class="card"><div class="card-header">状态管理</div><p style="font-size:.85rem;color:var(--text-dim)">Zustand 或 Jotai（Redux 太重）</p></div>
+    <div class="card"><div class="card-header">实时通信</div><p style="font-size:.85rem;color:var(--text-dim)">WebSocket（Socket.io 或原生 WS）</p></div>
+    <div class="card"><div class="card-header">视频播放</div><p style="font-size:.85rem;color:var(--text-dim)">Video.js 或 Plyr + WebVTT 字幕</p></div>
+  </div>
+
+  <h3>11.2 后端</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:12px 0">
+    <div class="card"><div class="card-header">框架</div><p style="font-size:.85rem;color:var(--text-dim)">NestJS (Node) 或 FastAPI (Python)</p></div>
+    <div class="card"><div class="card-header">任务队列</div><p style="font-size:.85rem;color:var(--text-dim)">BullMQ / Celery / Temporal</p></div>
+    <div class="card"><div class="card-header">数据库</div><p style="font-size:.85rem;color:var(--text-dim)">PostgreSQL + Redis + S3</p></div>
+    <div class="card"><div class="card-header">CDN</div><p style="font-size:.85rem;color:var(--text-dim)">Cloudflare / 独立 CDN</p></div>
+  </div>
+
+  <h3>11.4 图像/视频生成厂商</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>类型</th><th>便宜</th><th>贵</th></tr></thead>
+      <tbody>
+        <tr><td>图像</td><td>Flux Schnell / SDXL Turbo</td><td>Flux Pro / Imagen 3</td></tr>
+        <tr><td>视频</td><td>Hailuo / Pika</td><td>Kling 1.6 / Runway Gen-4</td></tr>
+        <tr><td>配音</td><td colspan="2">Hedra Character-3 / 自研</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>11.6 一致性的工程实现</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0">
+    <div class="card" style="border-color:var(--green)">
+      <div class="card-header"><span class="pill green">P0 推荐</span> 方案 A: IP-Adapter</div>
+      <ul style="font-size:.85rem">
+        <li>提取 face embedding，注入 condition</li>
+        <li>不需要训练，实时可用，成本低</li>
+        <li>一致性不完美，极端角度会跑偏</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:var(--blue)">
+      <div class="card-header"><span class="pill blue">P1</span> 方案 B: LoRA 微调</div>
+      <ul style="font-size:.85rem">
+        <li>4-8 张种子图训练轻量级 LoRA</li>
+        <li>一致性强</li>
+        <li>训练耗时 5-15 分钟/角色，成本高</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 12. MVP 拆解 ===== -->
+<section class="section" id="sec12">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:linear-gradient(135deg,#fdcb6e,#e17055);color:#000">12</span> MVP 拆解</h2>
+
+  <h3>12.1 P0：能跑通主路径</h3>
+  <div class="highlight-box green">
+    <strong>目标：</strong>一个新用户能完成"标签 → 剧本 → 资产 → 镜头 → 成片导出"全流程。<br>
+    <strong>预估：</strong>6-10 周（4-6 人小队）
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>模块</th><th>范围</th><th>砍刀</th></tr></thead>
+      <tbody>
+        <tr><td>项目库</td><td>简单列表 + 新建</td><td>不做模板</td></tr>
+        <tr><td>阶段一</td><td>标签 + 反推 + 开场白 + 编辑器</td><td>参考剧库可用 mock</td></tr>
+        <tr><td>阶段二</td><td>解析 + 资产卡 + 单卡操作</td><td>一致性走 IP-Adapter</td></tr>
+        <tr><td>阶段三</td><td>镜头列表 + 自动开拍 + 一句话改镜</td><td>高级调整只留"改台词"</td></tr>
+        <tr><td>阶段四</td><td>播放器 + 字幕 + 竖版导出</td><td>横版/封面/AI配乐砍掉</td></tr>
+        <tr><td>一稿多投</td><td colspan="2"><span class="pill red">完全砍掉 → P1</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>12.2 P1：差异化登场</h3>
+  <div class="highlight-box blue">
+    <strong>目标：</strong>上线一稿多投，出海团队拿到核武器。<strong>预估：</strong>4-6 周
+  </div>
+  <ul>
+    <li>一稿多投全流程</li>
+    <li>横版重剪 + 封面三件套</li>
+    <li>LoRA 角色一致性</li>
+    <li>高级调整面板全部按钮</li>
+    <li>项目模板库 + 完整版本快照</li>
+  </ul>
+
+  <h3>12.4 砍刀原则</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0">
+    <div class="card" style="border-color:var(--red)">
+      <div class="card-header"><span class="pill red">不能砍</span></div>
+      <ul style="font-size:.85rem">
+        <li>4 个阶段的连续性</li>
+        <li>标签到 InferredConfig 反推</li>
+        <li>自动开拍流水线</li>
+        <li>一句话改镜</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:var(--green)">
+      <div class="card-header"><span class="pill green">可以砍</span></div>
+      <ul style="font-size:.85rem">
+        <li>一致性的高级实现</li>
+        <li>高级调整细分按钮</li>
+        <li>视图切换</li>
+        <li>多人协作 / 模板 / 数据看板</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 13. 风险与对策 ===== -->
+<section class="section" id="sec13">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:var(--red);color:#fff">13</span> 风险与对策</h2>
+
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-header"><span class="dot" style="background:var(--red)"></span>一致性风险</div>
+    <p style="font-size:.85rem;color:var(--text-dim)"><strong>问题：</strong>角色脸在不同镜头间会跑偏<br><strong>对策：</strong>P0 接受不完美 → 提供"重生成"按钮让用户挑 → P1 上 LoRA → 长期训练自有模型</p>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-header"><span class="dot" style="background:var(--orange)"></span>成本风险</div>
+    <p style="font-size:.85rem;color:var(--text-dim)"><strong>问题：</strong>LLM + 图像 + 视频 + 配音叠加成本可能超付费意愿<br><strong>对策：</strong>严格并发控制 + 失败不重复扣费 + 智能模型路由 + 持续优化 prompt</p>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-header"><span class="dot" style="background:var(--blue)"></span>模型能力天花板</div>
+    <p style="font-size:.85rem;color:var(--text-dim)"><strong>问题：</strong>AI 视频模型做不到电影级质量<br><strong>对策：</strong>定位短剧（高密度切镜 + 强情绪对白） + 强化字幕/BGM/音效包装 + 快速接入新模型</p>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-header"><span class="dot" style="background:var(--pink)"></span>本地化质量</div>
+    <p style="font-size:.85rem;color:var(--text-dim)"><strong>问题：</strong>LLM 翻译水土不服<br><strong>对策：</strong>cultural_notes 让用户审核 + "保守/激进"两档 + P1 人工 reviewer + 数据反馈优化 prompt</p>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="dot" style="background:var(--accent)"></span>合规风险</div>
+    <p style="font-size:.85rem;color:var(--text-dim)"><strong>问题：</strong>不同地域内容合规要求不同<br><strong>对策：</strong>各地域"禁止/敏感"关键词表 + negative prompt 注入 + 导出前内容审查 + 高风险人工审核</p>
+  </div>
+</section>
+
+<!-- ===== 14. 验收标准 ===== -->
+<section class="section" id="sec14">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:linear-gradient(135deg,var(--green),#55efc4);color:#000">14</span> 验收标准</h2>
+
+  <h3>14.1 主路径验收（9 步走完）</h3>
+  <ol>
+    <li>打开落地页 → 5 秒内看到"+ 新建项目"</li>
+    <li>点新建 → 进入阶段一，看到默认标签和开场白</li>
+    <li>点开场白卡片 → 进入剧本编辑器，内容已预填</li>
+    <li>不修改剧本，直接点"下一步" → 阶段二资产开始生成</li>
+    <li>点"全部通过" → 进入阶段三</li>
+    <li>点"自动开拍" → 12 个镜头依次烤完</li>
+    <li>点"合成成片预览" → 进入阶段四</li>
+    <li>点播放，看完整集</li>
+    <li>点"竖版正片 → 下载" → 拿到 mp4</li>
+  </ol>
+
+  <div class="metrics" style="margin-top:16px">
+    <div class="metric"><div class="value" style="color:var(--green)">≤ 9</div><div class="label">操作步骤数</div></div>
+    <div class="metric"><div class="value" style="color:var(--blue)">≤ 5min</div><div class="label">主动操作时间</div></div>
+    <div class="metric"><div class="value" style="color:var(--orange)">≤ 12min</div><div class="label">含等待总时长</div></div>
+    <div class="metric"><div class="value" style="color:var(--accent-light)">≤ 1s</div><div class="label">阶段切换响应</div></div>
+  </div>
+
+  <h3>14.3 关键性能指标</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>指标</th><th>目标</th></tr></thead>
+      <tbody>
+        <tr><td>首屏加载时间</td><td><strong>< 2s</strong></td></tr>
+        <tr><td>标签切换响应</td><td><strong>< 200ms</strong></td></tr>
+        <tr><td>开场白生成</td><td><strong>< 8s</strong></td></tr>
+        <tr><td>剧本解析</td><td><strong>< 15s</strong></td></tr>
+        <tr><td>单张图像生成</td><td><strong>< 30s</strong></td></tr>
+        <tr><td>单段视频生成</td><td><strong>< 90s</strong></td></tr>
+        <tr><td>单集自动开拍总时长</td><td><strong>< 7 分钟</strong></td></tr>
+        <tr><td>成片渲染</td><td><strong>< 30s</strong></td></tr>
+        <tr><td>字幕开关切换</td><td><strong>< 500ms</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 15. 术语表 ===== -->
+<section class="section" id="sec15">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:var(--border-light);color:var(--text)">15</span> 术语表</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>术语</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td>TagSet</td><td>用户在阶段一选择的 4 个创作标签 + 受众</td></tr>
+        <tr><td>InferredConfig</td><td>由 TagSet 自动反推出来的技术参数</td></tr>
+        <tr><td>资产库 (AssetLibrary)</td><td>项目内所有场景、角色、道具的集合</td></tr>
+        <tr><td>镜头 (Shot)</td><td>最小视频片段，5-8 秒，引用 1 个场景 + 若干角色道具</td></tr>
+        <tr><td>流水线 (Pipeline)</td><td>单个 Shot 的三阶段生成：image → video → audio</td></tr>
+        <tr><td>一句话改镜</td><td>用自然语言修改单个 Shot 的主交互方式</td></tr>
+        <tr><td>自动开拍</td><td>阶段三核心动作，按顺序为所有 Shot 跑流水线</td></tr>
+        <tr><td>成片 (MasterCut)</td><td>所有 Shot 拼接 + 片头尾 + 字幕 + BGM 的完整一集</td></tr>
+        <tr><td>一稿多投</td><td>同一项目以另一地域市场的本地化版本重新生成</td></tr>
+        <tr><td>RegionVariant</td><td>一稿多投产物，共享剧本骨架，独立本地化资产和成片</td></tr>
+        <tr><td>失效传播</td><td>上游修改导致下游产物失效的自动标记机制</td></tr>
+        <tr><td>一致性 token</td><td>角色跨图像保持外观的技术手段（embedding 或 LoRA）</td></tr>
+        <tr><td>积分</td><td>工具的计费单位，所有生成动作消耗积分</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 附录 A ===== -->
+<section class="section" id="secA">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text)">A</span> 附录 A：用户旅程图</h2>
+  <pre><code>[落地页]
+   │
+   ▼
+[第 0 屏: 项目库] ─────"+ 新建项目"────┐
+                                       │
+                                       ▼
+                              [阶段一: 故事]
+                              ┌──────────────┐
+                              │ 选 4 个标签   │
+                              │ 看开场白预览  │
+                              │ 写/改剧本     │
+                              └──────┬───────┘
+                                     │ "下一步"
+                                     ▼
+                              [阶段二: 剧组筹备会]
+                              ┌──────────────┐
+                              │ 等待资产生成  │
+                              │ 审/换/微调    │
+                              │ (可跳过审核) │
+                              └──────┬───────┘
+                                     │ "下一步"
+                                     ▼
+                              [阶段三: 开机拍摄]
+                              ┌──────────────┐
+                              │ 自动开拍 ▶   │
+                              │ 单镜一句话改  │
+                              │ 看时间线进度  │
+                              └──────┬───────┘
+                                     │ "合成成片预览"
+                                     ▼
+                              [阶段四: 成片预览]
+                              ┌──────────────┐
+                              │ 整集播放      │
+                              │ 调片头尾字幕  │
+                              │ 导出三件套    │
+                              │ 一稿多投 ●●● │
+                              └──────┬───────┘
+                                     │
+                                     ▼
+                              [项目库] ←── 完成 ────</code></pre>
+</section>
+
+<!-- ===== 附录 B ===== -->
+<section class="section" id="secB">
+  <span class="section-anchor"></span>
+  <h2><span class="icon" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text)">B</span> 附录 B：核心 LLM Prompt 清单</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>用途</th><th>输入</th><th>输出</th></tr></thead>
+      <tbody>
+        <tr><td><code>prompt.opening.generate</code></td><td>阶段一开场白预生成</td><td>TagSet</td><td>3 个 opening</td></tr>
+        <tr><td><code>prompt.script.parse</code></td><td>阶段二剧本解析</td><td>Script</td><td>scenes/chars/props</td></tr>
+        <tr><td><code>prompt.script.extend</code></td><td>阶段一 AI 续写</td><td>Script + N 字</td><td>续写文本</td></tr>
+        <tr><td><code>prompt.shots.generate</code></td><td>阶段三镜头列表</td><td>Script + AssetLibrary</td><td>Shot[]</td></tr>
+        <tr><td><code>prompt.shot.rewrite</code></td><td>阶段三一句话改镜</td><td>Shot + user_input</td><td>新 description</td></tr>
+        <tr><td><code>prompt.shot.composition</code></td><td>阶段三调整构图</td><td>Shot + 预设</td><td>新 description</td></tr>
+        <tr><td><code>prompt.script.localize</code></td><td>一稿多投本地化</td><td>Script + region</td><td>LocalizedScript</td></tr>
+        <tr><td><code>prompt.assets.localize</code></td><td>一稿多投资产判断</td><td>AssetLibrary + region</td><td>重生成清单</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="color:var(--text-muted);font-size:.85rem;margin-top:12px">每个 prompt 在 LLMGateway 中独立版本化，允许 A/B 测试和回滚。</p>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer style="text-align:center;padding:60px 0 40px;border-top:1px solid var(--border);margin-top:80px">
+  <p style="color:var(--text-muted);font-size:.85rem">短剧创作工具 v2.0 · 产品需求文档</p>
+  <p style="color:var(--text-muted);font-size:.78rem;margin-top:4px">本 PRD 完成评审后，进入设计阶段（Figma 高保真稿）和工程拆解阶段（Linear/Jira issue 拆分）</p>
+</footer>
+
+</div><!-- .page-wrapper -->
+
+<script>
+// Toggle model blocks
+function toggleModel(header) {
+  const body = header.nextElementSibling;
+  const toggle = header.querySelector('.toggle');
+  if (body.classList.contains('collapsed')) {
+    body.classList.remove('collapsed');
+    body.style.maxHeight = body.scrollHeight + 'px';
+    header.classList.remove('collapsed');
+  } else {
+    body.classList.add('collapsed');
+    body.style.maxHeight = '0';
+    header.classList.add('collapsed');
+  }
+}
+
+// Initialize model blocks
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.model-block-body').forEach(body => {
+    body.style.maxHeight = body.scrollHeight + 'px';
+  });
+});
+
+// Sidebar toggle
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('sidebarOverlay');
+const menuBtn = document.getElementById('menuBtn');
+
+menuBtn.addEventListener('click', () => {
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+});
+overlay.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+});
+
+// Close sidebar on link click
+sidebar.querySelectorAll('a').forEach(a => {
+  a.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+  });
+});
+
+// Topbar scroll effect
+const topbar = document.getElementById('topbar');
+window.addEventListener('scroll', () => {
+  topbar.classList.toggle('scrolled', window.scrollY > 20);
+});
+
+// Back to top
+const backTop = document.getElementById('backTop');
+window.addEventListener('scroll', () => {
+  backTop.classList.toggle('show', window.scrollY > 400);
+});
+backTop.addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// Active sidebar link
+const sections = document.querySelectorAll('.section-anchor');
+const sidebarLinks = document.querySelectorAll('.sidebar a');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.parentElement.id;
+      sidebarLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+      });
+    }
+  });
+}, { rootMargin: '-80px 0px -60% 0px' });
+
+document.querySelectorAll('[id^="sec"]').forEach(sec => {
+  const anchor = sec.querySelector('.section-anchor');
+  if (anchor) observer.observe(anchor);
+});
+</script>
+</body>
+</html>

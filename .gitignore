@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Old version backup - superseded by main app/
+app_latest_from_shotforge/
+
