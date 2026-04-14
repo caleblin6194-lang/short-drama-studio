@@ -11,7 +11,7 @@ interface DoubaoImageRequest {
   seed?: number
 }
 
-interface DoubaoImageResponse {
+export interface DoubaoImageResponse {
   taskId?: string
   status: 'pending' | 'done' | 'failed'
   imageUrl?: string

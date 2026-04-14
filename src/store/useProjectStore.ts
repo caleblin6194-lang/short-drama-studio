@@ -10,6 +10,7 @@ import { useAuthStore } from './useAuthStore'
 import { getCreditCost } from '@/lib/creditCosts'
 import * as gen from '@/mock/generators'
 import { v4 as uuid } from 'uuid'
+import { startRealShootPipeline } from '@/lib/api/shoot-pipeline'
 
 interface ProjectStoreState {
   project: Project | null
@@ -408,9 +409,9 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     const ok = useCreditsStore.getState().consumeCredits(cost, p.id, p.title, '自动开拍')
     if (!ok) { alert('积分不足，无法开拍'); return }
     set({ isShooting: true })
-    const cancel = gen.startShootPipeline(
-      p.shots,
-      (shotId, stage, ps) => {
+
+    const shootCallbacks = {
+      onShotUpdate: (shotId: string, stage: 'image' | 'video' | 'audio', ps: any) => {
         set(s => {
           if (!s.project) return s
           const shots = s.project.shots.map(sh =>
@@ -419,11 +420,21 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
           return { project: { ...s.project, shots } }
         })
       },
-      () => {
+      onComplete: () => {
         set({ isShooting: false, cancelShoot: null })
         get().syncToList()
       },
-    )
+      onError: (shotId: string, stage: string, error: string) => {
+        console.error(`[Shoot] Shot ${shotId} ${stage} error:`, error)
+      },
+    }
+
+    // Use real pipeline if API key is configured, otherwise mock
+    const useRealPipeline = !!process.env.NEXT_PUBLIC_DOUBAN_SEED_API_KEY
+    const cancel = useRealPipeline
+      ? startRealShootPipeline(p.shots, shootCallbacks)
+      : gen.startShootPipeline(p.shots, shootCallbacks.onShotUpdate, shootCallbacks.onComplete)
+
     set({ cancelShoot: cancel })
   },
 

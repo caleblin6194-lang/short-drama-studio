@@ -112,6 +112,7 @@ export interface PipelineStage {
   cost?: number
   modelUsed?: string
   attemptCount: number
+  error?: string
 }
 
 export interface ShotPipeline {
