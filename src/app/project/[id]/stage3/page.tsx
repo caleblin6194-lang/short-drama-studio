@@ -110,10 +110,7 @@ export default function Stage3Page() {
         <div className="space-y-3">
           {shots.length === 0 && (
             <div className="card p-8 text-center">
-              <p className="text-[#a0a0b8] mb-3">暂无镜头，请先在第一步填写剧本后点击「生成镜头」</p>
-              <Button onClick={() => router.push(`/project/${project.id}/stage1`)} variant="secondary" size="sm">
-                去第一步写剧本
-              </Button>
+              <p className="text-[#a0a0b8] mb-3">暂无镜头，点击上方的「生成镜头」按钮即可生成</p>
             </div>
           )}
           {shots.map((shot, i) => (
