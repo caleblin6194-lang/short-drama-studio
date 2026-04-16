@@ -40,7 +40,9 @@ export async function generateImageWithDoubao(
       body: JSON.stringify({
         model: MODEL,
         prompt: req.prompt,
-        size: req.size === '1K' ? '1K' : req.size === '4K' ? '3k' : '2k',
+        // Doubao Seedream supports '2k' | '3k' | 'WIDTHxHEIGHT' (no 1k).
+        // Map '1K' → '2k' as the smallest valid tier.
+        size: req.size === '4K' ? '3k' : '2k',
         watermark: req.watermark ?? false,
         stream: false,
         response_format: 'url',

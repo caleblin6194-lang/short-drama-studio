@@ -57,7 +57,7 @@ export default function Stage4Page() {
 
       {/* 主体布局：左侧播放器 + 右侧控制面板 */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
-        <VideoPlayer masterCut={mc} />
+        <VideoPlayer masterCut={mc} shots={project.shots} />
 
         <div className="space-y-4">
           {mc && (

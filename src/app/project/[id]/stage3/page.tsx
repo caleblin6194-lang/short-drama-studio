@@ -14,11 +14,12 @@ import Button from '@/components/shared/Button'
 import Spinner from '@/components/shared/Spinner'
 import ProgressBar from '@/components/shared/ProgressBar'
 import Tabs from '@/components/shared/Tabs'
+import CollapsiblePanel from '@/components/shared/CollapsiblePanel'
 
 export default function Stage3Page() {
   const {
-    project, generateShots, isGeneratingShots, startShoot, isShooting,
-    reshootShot, updateShotDialogue, setStage,
+    project, generateShots, isGeneratingShots, startShoot, isShooting, cancelShoot,
+    reshootShot, updateShotDialogue, updateShotVideoModel, setStage,
   } = useProjectStore()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('episodes')
@@ -56,7 +57,15 @@ export default function Stage3Page() {
             自动开拍
           </Button>
         )}
-        {isShooting && <Spinner size={20} label="拍摄中..." />}
+        {isShooting && (
+          <>
+            <Button onClick={() => cancelShoot?.()} variant="secondary" size="sm">⏸ 暂停</Button>
+            <Spinner size={20} label="拍摄中..." />
+          </>
+        )}
+        {!isShooting && shots.some(s => s.pipeline.image.status === 'done' || s.pipeline.video.status === 'done') && !allDone && (
+          <Button onClick={startShoot} variant="primary" size="sm">▶️ 继续拍摄</Button>
+        )}
       </div>
 
       {/* 进度 */}
@@ -95,6 +104,7 @@ export default function Stage3Page() {
                     index={i}
                     onReshoot={reshootShot}
                     onDialogueChange={updateShotDialogue}
+                    onModelChange={updateShotVideoModel}
                   />
                 ))}
               </div>
@@ -104,16 +114,24 @@ export default function Stage3Page() {
       )}
 
       {/* AI 说话数字人 */}
-      <TalkingAvatarPanel />
+      <CollapsiblePanel title="AI 说话数字人" icon="🎭">
+        <TalkingAvatarPanel />
+      </CollapsiblePanel>
 
       {/* 对话智能对齐 */}
-      <DialogueSyncPanel />
+      <CollapsiblePanel title="对话智能对齐" icon="🎙️">
+        <DialogueSyncPanel />
+      </CollapsiblePanel>
 
       {/* 转场特效库 */}
-      <TransitionLibrary />
+      <CollapsiblePanel title="转场特效库" icon="🎬">
+        <TransitionLibrary />
+      </CollapsiblePanel>
 
       {/* 镜头Prompt优化 */}
-      <ShotPromptOptimizer />
+      <CollapsiblePanel title="镜头Prompt优化" icon="✨">
+        <ShotPromptOptimizer />
+      </CollapsiblePanel>
 
       {/* 下一步 */}
       <div className="flex justify-end pt-4 border-t border-[#2a2a3e]">

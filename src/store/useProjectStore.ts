@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import type { Project, TagSet, Shot, PipelineStage, Opening, RegionVariant, StoryBeatId, StoryStructurePlan, SubtitleStyle, Episode, EmotionalTone, CharacterAsset } from '@/types'
+import type { Project, TagSet, Shot, PipelineStage, Opening, RegionVariant, StoryBeatId, StoryStructurePlan, SubtitleStyle, Episode, EmotionalTone, CharacterAsset, PipelineStatus, VideoModelOption } from '@/types'
 import { inferConfig } from '@/lib/inferConfig'
 import { createStoryStructurePlan, formatStoryStructureToScript } from '@/lib/storyStructure'
 import { useProjectListStore } from './useProjectListStore'
@@ -18,6 +18,7 @@ interface ProjectStoreState {
   isGeneratingOpenings: boolean
   isExtendingScript: boolean
   isParsingScript: boolean
+  imageGenProgress: { done: number; total: number } | null
   isGeneratingShots: boolean
   isShooting: boolean
   isRendering: boolean
@@ -25,9 +26,11 @@ interface ProjectStoreState {
 
   loadProject: (id: string) => void
   syncToList: () => void
+  syncFromServer: (id: string) => Promise<void>
 
   // Stage 1
   setTag: <K extends keyof TagSet>(key: K, value: TagSet[K]) => void
+  setTitle: (title: string) => void
   generateOpenings: () => Promise<void>
   pickOpening: (opening: Opening) => void
   updateScript: (text: string) => void
@@ -43,6 +46,9 @@ interface ProjectStoreState {
   parseScript: () => Promise<void>
   approveAsset: (assetId: string) => void
   approveAllAssets: () => void
+  resetAssetApprovals: () => void
+  reshootAsset: (assetId: string) => void
+  addAsset: (asset: any, kind: 'scene' | 'character' | 'prop') => void
   lockCharacter: (characterId: string) => void
   unlockCharacter: (characterId: string) => void
 
@@ -53,8 +59,9 @@ interface ProjectStoreState {
   updateEpisode: (episodeId: string, patch: Partial<Episode>) => void
   moveShotToEpisode: (shotId: string, fromEpisodeId: string, toEpisodeId: string, newOrder: number) => void
   startShoot: () => void
-  reshootShot: (shotId: string, instruction: string) => Promise<void>
+  reshootShot: (shotId: string, instruction: string, model?: VideoModelOption) => Promise<void>
   updateShotDialogue: (shotId: string, dialogue: string) => void
+  updateShotVideoModel: (shotId: string, model: VideoModelOption) => void
 
   // Stage 4
   renderMasterCut: () => Promise<void>
@@ -73,6 +80,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   isGeneratingOpenings: false,
   isExtendingScript: false,
   isParsingScript: false,
+  imageGenProgress: null,
   isGeneratingShots: false,
   isShooting: false,
   isRendering: false,
@@ -85,7 +93,31 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
 
   syncToList: () => {
     const p = get().project
-    if (p) useProjectListStore.getState().updateProject(p.id, p)
+    if (p) {
+      useProjectListStore.getState().updateProject(p.id, p)
+      // Also sync to server
+      fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(p),
+      }).catch(console.error)
+    }
+  },
+
+  syncFromServer: async (id: string) => {
+    try {
+      const res = await fetch(`/api/projects?id=${id}`)
+      if (res.ok) {
+        const projects = await res.json()
+        const serverProject = projects.find((p: any) => p.id === id)
+        if (serverProject) {
+          useProjectListStore.getState().updateProject(id, serverProject)
+          set({ project: { ...serverProject } })
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync from server:', e)
+    }
   },
 
   // === Stage 1 ===
@@ -94,6 +126,14 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       if (!s.project) return s
       const tagSet = { ...s.project.tagSet, [key]: value }
       return { project: { ...s.project, tagSet, inferredConfig: inferConfig(tagSet) } }
+    })
+    get().syncToList()
+  },
+
+  setTitle: (title) => {
+    set(s => {
+      if (!s.project) return s
+      return { project: { ...s.project, title } }
     })
     get().syncToList()
   },
@@ -243,16 +283,112 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     if (!ok) { alert('积分不足，无法解析剧本'); return }
     set({ isParsingScript: true })
     const scriptText = get().project?.script.rawText ?? ''
-    await gen.parseScript(scriptText, (type, asset) => {
-      set(s => {
-        if (!s.project) return s
-        const lib = { ...s.project.assetLibrary }
-        if (type === 'scene') lib.scenes = [...lib.scenes.filter(a => a.id !== asset.id), asset as any]
-        if (type === 'character') lib.characters = [...lib.characters.filter(a => a.id !== asset.id), asset as any]
-        if (type === 'prop') lib.props = [...lib.props.filter(a => a.id !== asset.id), asset as any]
-        return { project: { ...s.project, assetLibrary: lib, status: 'casting' } }
+
+    // Call server-side API route which proxies to Doubao LLM (bypasses CORS)
+    try {
+      const res = await fetch('/api/script-parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scriptText }),
       })
-    })
+      const data = await res.json()
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || '解析失败 HTTP ' + res.status)
+      }
+
+      // Add all assets first (without images, status=generating)
+      const allAssetIds: { id: string; type: 'scene' | 'character' | 'prop' }[] = []
+
+      const addAssets = (assets: any[], type: 'scene' | 'character' | 'prop') => {
+        for (const a of assets) {
+          const id = uuid()
+          allAssetIds.push({ id, type })
+          let asset: any = { id, name: a.name ?? a.Name ?? '', description: a.description ?? a.Description ?? '', status: 'generating' as const, approvedByUser: false }
+          if (type === 'scene') {
+            asset = { ...asset, kind: 'scene' as const, timeOfDay: a.timeOfDay ?? a.TimeOfDay, mood: a.mood ?? a.Mood }
+          } else if (type === 'character') {
+            asset = { ...asset, kind: 'character' as const, tier: a.tier ?? 'support', age: a.age, gender: a.gender, isLocked: false }
+          } else {
+            asset = { ...asset, kind: 'prop' as const }
+          }
+          set(s => {
+            if (!s.project) return s
+            const lib = { ...s.project.assetLibrary }
+            if (type === 'scene') lib.scenes = [...lib.scenes, asset]
+            if (type === 'character') lib.characters = [...lib.characters, asset]
+            if (type === 'prop') lib.props = [...lib.props, asset]
+            return { project: { ...s.project, assetLibrary: lib, status: 'casting' } }
+          })
+        }
+      }
+
+      addAssets(data.scenes ?? [], 'scene')
+      addAssets(data.characters ?? [], 'character')
+      addAssets(data.props ?? [], 'prop')
+
+      // Now generate images for each asset via server-side API
+      const generateImageForAsset = async (assetId: string, type: 'scene' | 'character' | 'prop', name: string, description: string) => {
+        try {
+          let prompt = ''
+          if (type === 'scene') {
+            prompt = `电影级场景画面，${name}，${description}，电影光影，高细节，8K`
+          } else if (type === 'character') {
+            prompt = `电影级人物肖像，${name}，${description}，正脸，高细节，8K`
+          } else {
+            prompt = `电影级道具特写，${name}，${description}，高细节，8K`
+          }
+
+          const ires = await fetch('/api/shoot/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, size: '1K' }),
+          })
+          const iresult = await ires.json()
+
+          if (iresult.status === 'done' && iresult.imageUrl) {
+            set(s => {
+              if (!s.project) return s
+              const lib = { ...s.project.assetLibrary }
+              const update = (arr: any[]) => arr.map(a => a.id === assetId ? { ...a, imageUrl: iresult.imageUrl, status: 'ready' as const } : a)
+              lib.scenes = update(lib.scenes)
+              lib.characters = update(lib.characters)
+              lib.props = update(lib.props)
+              return { project: { ...s.project, assetLibrary: lib } }
+            })
+          }
+        } catch (e) {
+          console.error('Image gen failed for', name, e)
+          // Mark as ready without image
+          set(s => {
+            if (!s.project) return s
+            const lib = { ...s.project.assetLibrary }
+            const update = (arr: any[]) => arr.map(a => a.id === assetId ? { ...a, status: 'ready' as const } : a)
+            lib.scenes = update(lib.scenes)
+            lib.characters = update(lib.characters)
+            lib.props = update(lib.props)
+            return { project: { ...s.project, assetLibrary: lib } }
+          })
+        }
+      }
+
+      // Generate images in parallel for all assets
+      const allAssets = [...(data.scenes ?? []), ...(data.characters ?? []), ...(data.props ?? [])]
+      let done = 0
+      const total = allAssets.length
+      set({ imageGenProgress: { done: 0, total } })
+      await Promise.all(allAssets.map((a, i) => {
+        const { id, type } = allAssetIds[i]
+        return generateImageForAsset(id, type, a.name ?? a.Name ?? '', a.description ?? a.Description ?? '').then(() => {
+          done++
+          set({ imageGenProgress: { done, total } })
+        })
+      }))
+      set({ imageGenProgress: null })
+    } catch (err: any) {
+      alert('解析剧本失败：' + err.message)
+    }
+
     set({ isParsingScript: false })
     get().syncToList()
   },
@@ -277,6 +413,100 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         characters: s.project.assetLibrary.characters.map(a => ({ ...a, approvedByUser: true })),
         props: s.project.assetLibrary.props.map(a => ({ ...a, approvedByUser: true })),
       }
+      return { project: { ...s.project, assetLibrary: lib } }
+    })
+    get().syncToList()
+  },
+
+  resetAssetApprovals: () => {
+    set(s => {
+      if (!s.project) return s
+      const lib = {
+        scenes: s.project.assetLibrary.scenes.map(a => ({ ...a, approvedByUser: false })),
+        characters: s.project.assetLibrary.characters.map(a => ({ ...a, approvedByUser: false })),
+        props: s.project.assetLibrary.props.map(a => ({ ...a, approvedByUser: false })),
+      }
+      return { project: { ...s.project, assetLibrary: lib } }
+    })
+    get().syncToList()
+  },
+
+  reshootAsset: (assetId) => {
+    const p = get().project
+    if (!p) return
+    // Find the asset
+    let asset: any = null
+    let kind: 'scene' | 'character' | 'prop' | null = null
+    for (const s of p.assetLibrary.scenes) { if (s.id === assetId) { asset = s; kind = 'scene' } }
+    for (const c of p.assetLibrary.characters) { if (c.id === assetId) { asset = c; kind = 'character' } }
+    for (const pr of p.assetLibrary.props) { if (pr.id === assetId) { asset = pr; kind = 'prop' } }
+    if (!asset || !kind) return
+
+    let prompt = ''
+    if (kind === 'scene') prompt = `电影级场景画面，${asset.name}，${asset.description ?? ''}，电影光影，高细节，8K`
+    else if (kind === 'character') prompt = `电影级人物肖像，${asset.name}，${asset.description ?? ''}，正脸，高细节，8K`
+    else prompt = `电影级道具特写，${asset.name}，${asset.description ?? ''}，高细节，8K`
+
+    // Mark as generating
+    set(s => {
+      if (!s.project) return s
+      const lib = { ...s.project.assetLibrary }
+      const update = (arr: any[]) => arr.map(a => a.id === assetId ? { ...a, imageUrl: undefined, status: 'generating' as const } : a)
+      if (kind === 'scene') lib.scenes = update(lib.scenes)
+      else if (kind === 'character') lib.characters = update(lib.characters)
+      else lib.props = update(lib.props)
+      return { project: { ...s.project, assetLibrary: lib } }
+    })
+
+    // Generate new image
+    fetch('/api/shoot/image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, size: '1K' }),
+    }).then(res => res.json()).then(iresult => {
+      if (iresult.status === 'done' && iresult.imageUrl) {
+        set(s => {
+          if (!s.project) return s
+          const lib = { ...s.project.assetLibrary }
+          const update = (arr: any[]) => arr.map(a => a.id === assetId ? { ...a, imageUrl: iresult.imageUrl, status: 'ready' as const } : a)
+          if (kind === 'scene') lib.scenes = update(lib.scenes)
+          else if (kind === 'character') lib.characters = update(lib.characters)
+          else lib.props = update(lib.props)
+          return { project: { ...s.project, assetLibrary: lib } }
+        })
+      } else {
+        set(s => {
+          if (!s.project) return s
+          const lib = { ...s.project.assetLibrary }
+          const update = (arr: any[]) => arr.map(a => a.id === assetId ? { ...a, status: 'ready' as const } : a)
+          if (kind === 'scene') lib.scenes = update(lib.scenes)
+          else if (kind === 'character') lib.characters = update(lib.characters)
+          else lib.props = update(lib.props)
+          return { project: { ...s.project, assetLibrary: lib } }
+        })
+      }
+      get().syncToList()
+    }).catch(() => {
+      set(s => {
+        if (!s.project) return s
+        const lib = { ...s.project.assetLibrary }
+        const update = (arr: any[]) => arr.map(a => a.id === assetId ? { ...a, status: 'ready' as const } : a)
+        if (kind === 'scene') lib.scenes = update(lib.scenes)
+        else if (kind === 'character') lib.characters = update(lib.characters)
+        else lib.props = update(lib.props)
+        return { project: { ...s.project, assetLibrary: lib } }
+      })
+      get().syncToList()
+    })
+  },
+
+  addAsset: (asset, kind) => {
+    set(s => {
+      if (!s.project) return s
+      const lib = { ...s.project.assetLibrary }
+      if (kind === 'scene') lib.scenes = [...lib.scenes, asset]
+      else if (kind === 'character') lib.characters = [...lib.characters, asset]
+      else if (kind === 'prop') lib.props = [...lib.props, asset]
       return { project: { ...s.project, assetLibrary: lib } }
     })
     get().syncToList()
@@ -322,7 +552,14 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     if (!ok) { alert('积分不足，无法生成镜头'); return }
     set({ isGeneratingShots: true })
     const count = p?.inferredConfig.recommendedShotCount ?? 10
-    const shots = await gen.generateShots(p?.script.rawText ?? '', count)
+    const res = await fetch('/api/shots/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scriptText: p?.script.rawText ?? '', count }),
+    })
+    const data = await res.json()
+    if (!res.ok || data.error) throw new Error(data.error || '生成镜头失败')
+    const shots = data.shots
     // Group shots into episodes (5 shots per episode default)
     const shotsPerEpisode = 5
     const episodes: Episode[] = []
@@ -414,9 +651,14 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       onShotUpdate: (shotId: string, stage: 'image' | 'video' | 'audio', ps: any) => {
         set(s => {
           if (!s.project) return s
-          const shots = s.project.shots.map(sh =>
-            sh.id === shotId ? { ...sh, pipeline: { ...sh.pipeline, [stage]: ps } } : sh,
-          )
+          const shots = s.project.shots.map(sh => {
+            if (sh.id !== shotId) return sh
+            const updated = { ...sh, pipeline: { ...sh.pipeline, [stage]: ps } }
+            if (stage === 'video' && ps.videoUrl) updated.videoUrl = ps.videoUrl
+            if (stage === 'image' && ps.imageUrl) updated.imageUrl = ps.imageUrl
+            if (stage === 'audio' && ps.audioUrl) updated.audioUrl = ps.audioUrl
+            return updated
+          })
           return { project: { ...s.project, shots } }
         })
       },
@@ -429,29 +671,93 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       },
     }
 
-    // Use real pipeline if API key is configured, otherwise mock
-    const useRealPipeline = !!process.env.NEXT_PUBLIC_DOUBAN_SEED_API_KEY
-    const cancel = useRealPipeline
-      ? startRealShootPipeline(p.shots, shootCallbacks)
-      : gen.startShootPipeline(p.shots, shootCallbacks.onShotUpdate, shootCallbacks.onComplete)
+    // Always use real pipeline - server API routes hold the actual key.
+    const cancel = startRealShootPipeline(p.shots, shootCallbacks)
 
     set({ cancelShoot: cancel })
   },
 
-  reshootShot: async (shotId, instruction) => {
+  reshootShot: async (shotId, instruction, model) => {
     const p = get().project
     const cost = getCreditCost('reshoot_shot', 'cost_first')
     const ok = useCreditsStore.getState().consumeCredits(cost, p?.id ?? '', p?.title ?? '', '重拍镜头')
     if (!ok) { alert('积分不足，无法重拍'); return }
-    await gen.reshootShot(shotId, instruction, (stage, ps) => {
+    const shot = p?.shots.find(s => s.id === shotId)
+    if (!shot) return
+    // Use real pipeline for reshoot
+    const newPrompt = instruction ? `${shot.description} | ${instruction}` : shot.description
+    try {
+      // Reset pipeline
       set(s => {
         if (!s.project) return s
         const shots = s.project.shots.map(sh =>
-          sh.id === shotId ? { ...sh, pipeline: { ...sh.pipeline, [stage]: ps } } : sh,
+          sh.id === shotId ? {
+            ...sh,
+            description: newPrompt,
+            videoModel: model as any,
+            pipeline: {
+              image: { status: 'pending' as const, attemptCount: 0 },
+              video: { status: 'pending' as const, attemptCount: 0 },
+              audio: { status: 'pending' as const, attemptCount: 0 },
+            },
+            imageUrl: undefined, videoUrl: undefined, audioUrl: undefined,
+          } : sh,
         )
         return { project: { ...s.project, shots } }
       })
-    })
+      // Call image API
+      const ires = await fetch('/api/shoot/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: newPrompt, size: '1K' }),
+      })
+      const iresult = await ires.json()
+      let imageUrl = iresult.imageUrl
+      if (iresult.taskId && !imageUrl) {
+        // Poll for result
+        for (let i = 0; i < 60; i++) {
+          await new Promise(r => setTimeout(r, 3000))
+          const pr = await fetch(`/api/shoot/video-status/${encodeURIComponent(iresult.taskId)}`)
+          const pres = await pr.json()
+          if (pres.status === 'done' && pres.imageUrl) { imageUrl = pres.imageUrl; break }
+          if (pres.status === 'failed') break
+        }
+      }
+      set(s => {
+        if (!s.project) return s
+        const shots = s.project.shots.map(sh =>
+          sh.id === shotId ? { ...sh, imageUrl, pipeline: { ...sh.pipeline, image: { status: (imageUrl ? 'done' : 'failed') as PipelineStatus, attemptCount: 1, modelUsed: 'doubao-seedream-5-0-260128' } } } : sh,
+        )
+        return { project: { ...s.project, shots } }
+      })
+      if (!imageUrl) return
+      // Call video API with model
+      const vres = await fetch('/api/shoot/video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: newPrompt, imageUrl, duration: 5, aspectRatio: '9:16', model }),
+      })
+      const vresult = await vres.json()
+      let videoUrl = vresult.videoUrl
+      if (vresult.taskId && !videoUrl) {
+        for (let i = 0; i < 60; i++) {
+          await new Promise(r => setTimeout(r, 3000))
+          const pr = await fetch(`/api/shoot/video-status/${encodeURIComponent(vresult.taskId)}`)
+          const pres = await pr.json()
+          if (pres.status === 'done' && pres.videoUrl) { videoUrl = pres.videoUrl; break }
+          if (pres.status === 'failed') break
+        }
+      }
+      set(s => {
+        if (!s.project) return s
+        const shots = s.project.shots.map(sh =>
+          sh.id === shotId ? { ...sh, videoUrl, pipeline: { ...sh.pipeline, video: { status: (videoUrl ? 'done' : 'failed') as PipelineStatus, attemptCount: 1, modelUsed: 'doubao-seedance-2-0-260128' } } } : sh,
+        )
+        return { project: { ...s.project, shots } }
+      })
+    } catch (e: any) {
+      console.error('Reshoot error:', e)
+    }
     get().syncToList()
   },
 
@@ -459,6 +765,15 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     set(s => {
       if (!s.project) return s
       const shots = s.project.shots.map(sh => sh.id === shotId ? { ...sh, dialogue } : sh)
+      return { project: { ...s.project, shots } }
+    })
+    get().syncToList()
+  },
+
+  updateShotVideoModel: (shotId, model) => {
+    set(s => {
+      if (!s.project) return s
+      const shots = s.project.shots.map(sh => sh.id === shotId ? { ...sh, videoModel: model } : sh)
       return { project: { ...s.project, shots } }
     })
     get().syncToList()
@@ -472,26 +787,56 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     const ok = useCreditsStore.getState().consumeCredits(cost, p.id, p.title, '渲染成片')
     if (!ok) { alert('积分不足，无法渲染'); return }
     set({ isRendering: true })
-    const result = await gen.renderMasterCut(p.id)
-    set(s => {
-      if (!s.project) return { isRendering: false }
-      return {
-        isRendering: false,
-        project: {
-          ...s.project,
-          status: 'mastering',
-          masterCut: {
-            id: uuid(),
-            projectId: s.project.id,
-            subtitlesEnabled: true,
-            subtitleStyle: { animation: 'fade', position: 'bottom', fontSize: 'md', fontColor: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', backgroundEnabled: true },
-            bgmEnabled: true,
-            bgmTrack: 'epic_tension',
-            ...result,
+    try {
+      const shotsWithVideo = p.shots.filter(s =>
+        (s.videoUrl && s.videoUrl !== '#') ||
+        (s.pipeline?.video?.videoUrl && s.pipeline.video.videoUrl !== '#')
+      )
+      if (shotsWithVideo.length === 0) throw new Error('没有可用的镜头视频')
+
+      // Build render list: prefer shot.videoUrl, fall back to pipeline videoUrl
+      const renderShots = p.shots
+        .filter(s => (s.videoUrl && s.videoUrl !== '#') || (s.pipeline?.video?.videoUrl && s.pipeline.video.videoUrl !== '#'))
+        .map(s => ({
+          videoUrl: s.videoUrl || s.pipeline.video.videoUrl,
+          description: s.description,
+          durationSec: s.durationSec,
+        }))
+
+      const res = await fetch('/api/render/master-cut', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: p.id,
+          shots: renderShots,
+        }),
+      })
+      const result = await res.json()
+      if (!res.ok || result.error) throw new Error(result.error || '渲染失败')
+      set(s => {
+        if (!s.project) return { isRendering: false }
+        return {
+          isRendering: false,
+          project: {
+            ...s.project,
+            status: 'mastering',
+            masterCut: {
+              id: uuid(),
+              projectId: s.project.id,
+              subtitlesEnabled: true,
+              subtitleStyle: { animation: 'fade', position: 'bottom', fontSize: 'md', fontColor: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', backgroundEnabled: true },
+              bgmEnabled: true,
+              bgmTrack: 'epic_tension',
+              renderedUrl: result.renderedUrl,
+              durationSec: result.durationSec,
+            },
           },
-        },
-      }
-    })
+        }
+      })
+    } catch (err: any) {
+      alert('渲染失败：' + err.message)
+      set({ isRendering: false })
+    }
     get().syncToList()
   },
 

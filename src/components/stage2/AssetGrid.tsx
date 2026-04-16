@@ -10,10 +10,11 @@ import { useUpload } from '@/lib/useUpload'
 interface AssetGridProps {
   library: AssetLibrary
   onApprove: (assetId: string) => void
+  onReshoot: (assetId: string) => void
   onAssetUploaded?: (asset: SceneAsset | CharacterAsset | PropAsset) => void
 }
 
-export default function AssetGrid({ library, onApprove, onAssetUploaded }: AssetGridProps) {
+export default function AssetGrid({ library, onApprove, onReshoot, onAssetUploaded }: AssetGridProps) {
   const { scenes, characters, props } = library
   const [uploadType, setUploadType] = useState<'scene' | 'character' | 'prop' | null>(null)
   const { upload, uploading } = useUpload()
@@ -22,24 +23,20 @@ export default function AssetGrid({ library, onApprove, onAssetUploaded }: Asset
     const result = await upload(file)
     if (!result || !uploadType) return
 
-    // Call API to create asset
-    const res = await fetch('/api/assets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        projectId: 'demo', // Will be connected to actual project in store
-        assetType: uploadType,
-        data: {
-          name: file.name.replace(/\.[^.]+$/, ''),
-          imageUrl: result.url,
-          status: 'ready',
-        },
-      }),
-    })
+    const asset: any = {
+      id: crypto.randomUUID(),
+      name: file.name.replace(/\.[^.]+$/, ''),
+      description: '',
+      imageUrl: result.url,
+      status: 'ready' as const,
+      approvedByUser: false,
+    }
+    if (uploadType === 'scene') { asset.kind = 'scene' }
+    else if (uploadType === 'character') { asset.kind = 'character'; asset.tier = 'support' }
+    else { asset.kind = 'prop' }
 
-    if (!res.ok) throw new Error('Failed to create asset')
-    const asset = await res.json()
     onAssetUploaded?.(asset)
+    setUploadType(null)
   }
 
   return (
@@ -56,7 +53,7 @@ export default function AssetGrid({ library, onApprove, onAssetUploaded }: Asset
           {scenes.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {scenes.map(s => (
-                <AssetCard key={s.id} asset={s} aspectRatio="4/3" onApprove={() => onApprove(s.id)} />
+                <AssetCard key={s.id} asset={s} aspectRatio="4/3" onApprove={() => onApprove(s.id)} onReshoot={() => onReshoot(s.id)} />
               ))}
             </div>
           ) : (
@@ -75,7 +72,7 @@ export default function AssetGrid({ library, onApprove, onAssetUploaded }: Asset
           {characters.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {characters.map(c => (
-                <AssetCard key={c.id} asset={c} aspectRatio="3/4" onApprove={() => onApprove(c.id)} />
+                <AssetCard key={c.id} asset={c} aspectRatio="3/4" onApprove={() => onApprove(c.id)} onReshoot={() => onReshoot(c.id)} />
               ))}
             </div>
           ) : (
@@ -94,7 +91,7 @@ export default function AssetGrid({ library, onApprove, onAssetUploaded }: Asset
           {props.length > 0 ? (
             <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
               {props.map(p => (
-                <AssetCard key={p.id} asset={p} aspectRatio="1/1" onApprove={() => onApprove(p.id)} />
+                <AssetCard key={p.id} asset={p} aspectRatio="1/1" onApprove={() => onApprove(p.id)} onReshoot={() => onReshoot(p.id)} />
               ))}
             </div>
           ) : (

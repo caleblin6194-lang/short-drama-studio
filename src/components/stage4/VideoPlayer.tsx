@@ -1,8 +1,13 @@
 'use client'
 
-import type { MasterCut } from '@/types'
+import type { MasterCut, Shot } from '@/types'
 
-export default function VideoPlayer({ masterCut }: { masterCut: MasterCut | null }) {
+interface VideoPlayerProps {
+  masterCut: MasterCut | null
+  shots?: Shot[]
+}
+
+export default function VideoPlayer({ masterCut, shots = [] }: VideoPlayerProps) {
   if (!masterCut) {
     return (
       <div className="aspect-[9/16] max-w-sm mx-auto bg-[#1a1a2e] rounded-xl flex items-center justify-center border border-[#2a2a3e]">
@@ -14,6 +19,11 @@ export default function VideoPlayer({ masterCut }: { masterCut: MasterCut | null
     )
   }
 
+  // Extract dialogue lines from shots for real subtitles
+  const dialogues = shots
+    .filter(s => s.dialogue && s.dialogue.trim())
+    .map(s => s.dialogue.trim())
+
   return (
     <div className="aspect-[9/16] max-w-sm mx-auto bg-[#1a1a2e] rounded-xl overflow-hidden border border-[#2a2a3e] relative group">
       {/* 占位画面 */}
@@ -23,12 +33,28 @@ export default function VideoPlayer({ masterCut }: { masterCut: MasterCut | null
         <p className="text-sm text-[#a0a0b8] mt-1">{masterCut.durationSec}s</p>
       </div>
 
-      {/* 字幕模拟 */}
-      {masterCut.subtitlesEnabled && (
-        <div className="absolute bottom-16 left-4 right-4 text-center">
-          <span className="bg-black/60 text-white text-sm px-3 py-1 rounded">
-            "三年隐忍，今日我陈默，不再沉默。"
-          </span>
+      {/* 真实字幕：从镜头对白提取 */}
+      {masterCut.subtitlesEnabled && dialogues.length > 0 && (
+        <div className="absolute bottom-16 left-4 right-4 space-y-1">
+          {dialogues.map((text, i) => {
+            const fontSize = masterCut.subtitleStyle.fontSize === 'lg' ? '14px'
+              : masterCut.subtitleStyle.fontSize === 'sm' ? '10px' : '12px'
+            return (
+              <div key={i} className="text-center">
+                <span
+                  className="text-white px-2 py-0.5 rounded inline-block"
+                  style={{
+                    backgroundColor: masterCut.subtitleStyle.backgroundEnabled
+                      ? (masterCut.subtitleStyle.backgroundColor || 'rgba(0,0,0,0.6)')
+                      : 'transparent',
+                    fontSize,
+                  }}
+                >
+                  &ldquo;{text}&rdquo;
+                </span>
+              </div>
+            )
+          })}
         </div>
       )}
 

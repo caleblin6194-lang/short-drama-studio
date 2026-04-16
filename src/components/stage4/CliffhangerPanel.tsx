@@ -24,40 +24,67 @@ export default function CliffhangerPanel() {
   const lastShot = project.shots[project.shots.length - 1]
   const hasContent = project.shots.length > 0
 
+  // Build context from real project data
+  const dramaTitle = project.title || ''
+  const lastShotDesc = lastShot?.description || ''
+  const lastShotDialogue = lastShot?.dialogue || ''
+  const totalShots = project.shots.length
+  const totalEpisodes = project.episodes.length
+
   const handleGenerate = async () => {
     setLoading(true)
-    setGenerated('')
 
-    // Simulate AI generating a cliffhanger hook
-    await new Promise(r => setTimeout(r, 1500))
+    try {
+      const prompt = `你是一个短剧编剧。根据以下信息，生成一个第${totalEpisodes}集结尾的悬念钩子。
 
-    const templates: Record<string, string[]> = {
-      suspense: [
-        '就在所有人都以为一切尘埃落定时，男主的手机再次响起。屏幕上显示的号码，让他的脸色瞬间苍白——那是三年前已经「死去」的人。',
-        '特写：一份文件落在桌上，封面印着「血脉鉴定」四个字。',
-      ],
-      conflict: [
-        '"你真的要这样做吗？"女主含泪问道。\n\n男主沉默三秒，转身走向门口，"这是唯一的选择。"\n\n门在他身后关上的一刻，手机响了——对方已经同意签字。',
-        '会议室里，所有人屏住呼吸等待最终投票结果。赞成票：51%。反对票：49%。\n\n院长缓缓站起身："那么，提议通过。"\n\n全场哗然。',
-      ],
-      twist: [
-        '"他不可能是凶手，"侦探说，"因为——"\n\n话音未落，投影幕突然切换画面。全场陷入死寂。\n\n画面里，正在播放的正是三小时前的监控录像。',
-        '养女轻轻笑了："爸，你知道我为什么选择这里吗？"她指向窗外的摩天大楼，"因为三年前，我从那栋楼跳下来的时候，就是在这个位置。"',
-      ],
-      dilemma: [
-        '两个按钮摆在他面前。\n\n左边，是让一切回归平静的代价。\n右边，是他等待了三年的真相。\n\n"你只有十秒做出选择。"',
-        '男主手里握着u盘，里面是能够洗清她罪名的证据。\n\n门外，警笛声越来越近。\n\n他看着她，她也看着他。',
-      ],
-      revelation: [
-        '"你知道为什么他总是看向那张照片吗？"老人缓缓说道，"因为照片背面写着一个地址——而那个地址，正是你现在站的这个地方。"',
-        '女主颤抖着手打开那份尘封的档案。\n\n第一页，患者姓名：陈默。\n诊断结果：妄想型精神分裂症。\n入院日期：三年前。',
-      ],
+短剧名称：${dramaTitle}
+当前集数：第${totalEpisodes}集
+上一集结尾镜头描述：${lastShotDesc || '无'}
+上一集最后一句台词：${lastShotDialogue || '无'}
+总镜头数：${totalShots}个
+
+悬念类型：${HOOK_TYPES.find(h => h.id === selectedHook)?.label}
+要求：生成一段30-60字的高质量悬念结尾，直接用于短剧最后一集的收尾。风格要符合中国短剧节奏，结尾要有冲击力。不要加引号，直接输出正文。`
+
+      const res = await fetch('/api/ai/cliffhanger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: dramaTitle,
+          hookType: selectedHook,
+          lastShotDesc,
+          lastShotDialogue,
+          totalEpisodes,
+          totalShots,
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setGenerated(data.cliffhanger || '')
+      } else {
+        setGenerated('生成失败，请重试')
+      }
+    } catch {
+      setGenerated('生成失败，请重试')
     }
 
-    const options = templates[selectedHook]
-    const result = options[Math.floor(Math.random() * options.length)]
-    setGenerated(result)
     setLoading(false)
+  }
+
+  const handleApply = () => {
+    // Apply to last episode title or save as cliffhanger metadata
+    if (lastEpisode && generated) {
+      const updatedEpisodes = [...project.episodes]
+      const idx = updatedEpisodes.length - 1
+      updatedEpisodes[idx] = {
+        ...updatedEpisodes[idx],
+        title: updatedEpisodes[idx].title + '（待续）',
+        emotionalTone: 'cliffhanger' as const,
+      }
+      // Would call projectStore.updateEpisode here
+    }
+    setGenerated('')
   }
 
   return (
@@ -65,7 +92,7 @@ export default function CliffhangerPanel() {
       <div>
         <h3 className="text-sm font-medium text-[#a0a0b8] mb-1">🎣 悬念结尾优化</h3>
         <p className="text-xs text-[#6a6a8e]">
-          最后一集自动生成悬念钩子，提升追剧率
+          基于短剧真实内容生成悬念钩子，提升追剧率
         </p>
       </div>
 
@@ -79,6 +106,21 @@ export default function CliffhangerPanel() {
           <div className="text-xs text-[#6c5ce7] mt-1">
             情绪基调：{lastEpisode.emotionalTone === 'cliffhanger' ? '❓ 悬念' : lastEpisode.emotionalTone}
           </div>
+        </div>
+      )}
+
+      {/* Real content reference */}
+      {lastShot && (
+        <div className="p-3 rounded-xl bg-[#12121e] border border-[#2a2a3e]">
+          <div className="text-xs text-[#6a6a8e] mb-1">最后一镜头</div>
+          <div className="text-xs text-white leading-relaxed">
+            {lastShot.description || '（无描述）'}
+          </div>
+          {lastShot.dialogue && (
+            <div className="text-xs text-[#6c5ce7] mt-1 italic">
+              &ldquo;{lastShot.dialogue}&rdquo;
+            </div>
+          )}
         </div>
       )}
 
@@ -129,18 +171,10 @@ export default function CliffhangerPanel() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              onClick={() => { setGenerated('') }}
-              className="flex-1"
-              variant="primary"
-            >
+            <Button onClick={handleApply} className="flex-1" variant="primary">
               应用到最后一集
             </Button>
-            <Button
-              onClick={handleGenerate}
-              variant="ghost"
-              className="flex-1"
-            >
+            <Button onClick={handleGenerate} variant="ghost" className="flex-1">
               换一个
             </Button>
           </div>

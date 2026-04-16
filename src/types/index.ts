@@ -104,6 +104,30 @@ export interface PropAsset extends AssetBase {
 
 export type AnyAsset = SceneAsset | CharacterAsset | PropAsset
 
+// ===== Video Model =====
+export type VideoModelOption =
+  | 'auto'
+  | 'seedance-1-0-fast'
+  | 'seedance-1-0-pro'
+  | 'seedance-1-5-pro'
+  | 'seedance-2-0'
+
+export const VIDEO_MODEL_META: Record<VideoModelOption, { label: string; desc: string; price: string }> = {
+  'auto':               { label: 'AI 推荐', desc: '根据场景自动选择最合适模型', price: '?' },
+  'seedance-1-0-fast': { label: '1.0 Fast', desc: '快速低价，适合无台词分镜', price: '¥' },
+  'seedance-1-0-pro':   { label: '1.0 Pro',  desc: '高性价比，适合一般分镜', price: '¥¥' },
+  'seedance-1-5-pro':   { label: '1.5 Pro',  desc: '音画同步，适合有台词分镜', price: '¥¥¥' },
+  'seedance-2-0':       { label: '2.0 旗舰', desc: '最高质量，电影级画质', price: '¥¥¥¥' },
+}
+
+export function recommendVideoModel(shot: Pick<Shot, 'dialogue' | 'description'>): VideoModelOption {
+  const hasDialogue = shot.dialogue && shot.dialogue.trim().length > 0
+  const isComplex = shot.description.length > 80 || /多人|大场景|战斗|爆炸|特效/i.test(shot.description)
+  if (isComplex) return 'seedance-2-0'
+  if (hasDialogue) return 'seedance-1-5-pro'
+  return 'seedance-1-0-fast'
+}
+
 // ===== Shot =====
 export type PipelineStatus = 'pending' | 'queued' | 'rendering' | 'done' | 'failed' | 'stale'
 
@@ -113,6 +137,9 @@ export interface PipelineStage {
   modelUsed?: string
   attemptCount: number
   error?: string
+  audioUrl?: string
+  videoUrl?: string
+  imageUrl?: string
 }
 
 export interface ShotPipeline {
@@ -133,6 +160,7 @@ export interface Shot {
   cameraDirection?: string
   durationSec: number
   pipeline: ShotPipeline
+  videoModel?: VideoModelOption  // 'auto' means use AI recommendation
   imageUrl?: string
   videoUrl?: string
   audioUrl?: string
