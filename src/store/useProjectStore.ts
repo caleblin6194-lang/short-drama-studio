@@ -59,6 +59,7 @@ interface ProjectStoreState {
   updateEpisode: (episodeId: string, patch: Partial<Episode>) => void
   moveShotToEpisode: (shotId: string, fromEpisodeId: string, toEpisodeId: string, newOrder: number) => void
   startShoot: () => void
+  shootSingleShot: (shotId: string) => Promise<void>
   reshootShot: (shotId: string, instruction: string, model?: VideoModelOption) => Promise<void>
   updateShotDialogue: (shotId: string, dialogue: string) => void
   updateShotVideoModel: (shotId: string, model: VideoModelOption) => void
@@ -675,6 +676,146 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     const cancel = startRealShootPipeline(p.shots, shootCallbacks)
 
     set({ cancelShoot: cancel })
+  },
+
+  shootSingleShot: async (shotId) => {
+    const p = get().project
+    if (!p) return
+    const shot = p.shots.find(s => s.id === shotId)
+    if (!shot) return
+
+    const cost = getCreditCost('shoot_pipeline', 'cost_first')
+    const ok = useCreditsStore.getState().consumeCredits(cost, p.id, p.title, '生成镜头')
+    if (!ok) { alert('积分不足，无法生成'); return }
+
+    // Reset pipeline for this shot
+    set(s => {
+      if (!s.project) return s
+      const shots = s.project.shots.map(sh =>
+        sh.id === shotId ? {
+          ...sh,
+          pipeline: {
+            image: { status: 'rendering' as const, attemptCount: 1 },
+            video: { status: 'pending' as const, attemptCount: 0 },
+            audio: { status: 'pending' as const, attemptCount: 0 },
+          },
+          imageUrl: undefined, videoUrl: undefined,
+        } : sh,
+      )
+      return { project: { ...s.project, shots } }
+    })
+
+    try {
+      // Stage 1: Generate image
+      const ires = await fetch('/api/shoot/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: shot.description, size: '2K' }),
+      })
+      const iresult = await ires.json()
+      let imageUrl = iresult.imageUrl
+
+      if (iresult.taskId && !imageUrl) {
+        for (let i = 0; i < 60; i++) {
+          await new Promise(r => setTimeout(r, 3000))
+          const pr = await fetch(`/api/shoot/video-status/${encodeURIComponent(iresult.taskId)}`)
+          const pres = await pr.json()
+          if (pres.status === 'done' && pres.imageUrl) { imageUrl = pres.imageUrl; break }
+          if (pres.status === 'failed') break
+        }
+      }
+
+      const imageStatus = imageUrl ? 'done' : 'failed'
+      set(s => {
+        if (!s.project) return s
+        const shots = s.project.shots.map(sh =>
+          sh.id === shotId ? {
+            ...sh, imageUrl,
+            pipeline: { ...sh.pipeline, image: { status: imageStatus as any, attemptCount: 1, modelUsed: 'doubao-seedream-5-0-260128' } },
+          } : sh,
+        )
+        return { project: { ...s.project, shots } }
+      })
+
+      if (!imageUrl) return
+
+      // Stage 2: Generate video
+      set(s => {
+        if (!s.project) return s
+        const shots = s.project.shots.map(sh =>
+          sh.id === shotId ? { ...sh, pipeline: { ...sh.pipeline, video: { status: 'rendering' as const, attemptCount: 1 } } } : sh,
+        )
+        return { project: { ...s.project, shots } }
+      })
+
+      const model = shot.videoModel && shot.videoModel !== 'auto' ? shot.videoModel : undefined
+      const vres = await fetch('/api/shoot/video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: shot.description, imageUrl, duration: shot.durationSec || 5, aspectRatio: '9:16', model }),
+      })
+      const vresult = await vres.json()
+      let videoUrl = vresult.videoUrl || vresult.data?.videoUrl
+
+      if (vresult.taskId && !videoUrl) {
+        for (let i = 0; i < 60; i++) {
+          await new Promise(r => setTimeout(r, 5000))
+          const pr = await fetch(`/api/shoot/video-status/${encodeURIComponent(vresult.taskId)}`)
+          const pres = await pr.json()
+          if (pres.status === 'done' && pres.videoUrl) { videoUrl = pres.videoUrl; break }
+          if (pres.status === 'failed') break
+        }
+      }
+
+      const videoStatus = videoUrl ? 'done' : 'failed'
+      set(s => {
+        if (!s.project) return s
+        const shots = s.project.shots.map(sh =>
+          sh.id === shotId ? {
+            ...sh, videoUrl,
+            pipeline: { ...sh.pipeline, video: { status: videoStatus as any, attemptCount: 1, modelUsed: model || 'seedance-2-0' } },
+          } : sh,
+        )
+        return { project: { ...s.project, shots } }
+      })
+
+      // Stage 3: Generate audio (TTS from dialogue)
+      if (shot.dialogue && videoUrl) {
+        set(s => {
+          if (!s.project) return s
+          const shots = s.project.shots.map(sh =>
+            sh.id === shotId ? { ...sh, pipeline: { ...sh.pipeline, audio: { status: 'done' as const, attemptCount: 1 } } } : sh,
+          )
+          return { project: { ...s.project, shots } }
+        })
+      } else {
+        set(s => {
+          if (!s.project) return s
+          const shots = s.project.shots.map(sh =>
+            sh.id === shotId ? { ...sh, pipeline: { ...sh.pipeline, audio: { status: 'done' as const, attemptCount: 1 } } } : sh,
+          )
+          return { project: { ...s.project, shots } }
+        })
+      }
+
+      get().syncToList()
+    } catch (err) {
+      console.error('[shootSingleShot] error:', err)
+      set(s => {
+        if (!s.project) return s
+        const shots = s.project.shots.map(sh =>
+          sh.id === shotId ? {
+            ...sh,
+            pipeline: {
+              image: { ...sh.pipeline.image, status: 'failed' as const },
+              video: { ...sh.pipeline.video, status: 'failed' as const },
+              audio: { ...sh.pipeline.audio, status: 'done' as const },
+            },
+          } : sh,
+        )
+        return { project: { ...s.project, shots } }
+      })
+    }
   },
 
   reshootShot: async (shotId, instruction, model) => {

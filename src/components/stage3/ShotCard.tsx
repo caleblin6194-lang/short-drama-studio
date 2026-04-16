@@ -8,6 +8,7 @@ import PipelineIndicator from './PipelineIndicator'
 interface ShotCardProps {
   shot: Shot
   index: number
+  onShoot?: (shotId: string) => Promise<void>
   onReshoot: (shotId: string, instruction: string, model?: VideoModelOption) => Promise<void>
   onDialogueChange: (shotId: string, dialogue: string) => void
   onModelChange: (shotId: string, model: VideoModelOption) => void
@@ -17,8 +18,9 @@ const MODEL_OPTIONS: VideoModelOption[] = ['auto', 'seedance-1-0-fast', 'seedanc
 
 type PreviewType = 'image' | 'video' | 'audio' | null
 
-export default function ShotCard({ shot, index, onReshoot, onDialogueChange, onModelChange }: ShotCardProps) {
+export default function ShotCard({ shot, index, onShoot, onReshoot, onDialogueChange, onModelChange }: ShotCardProps) {
   const [isReshooting, setIsReshooting] = useState(false)
+  const [isShooting, setIsShooting] = useState(false)
   const [customPrompt, setCustomPrompt] = useState('')
   const [previewType, setPreviewType] = useState<PreviewType>(null)
   const allDone = shot.pipeline.image.status === 'done' && shot.pipeline.video.status === 'done' && shot.pipeline.audio.status === 'done'
@@ -26,6 +28,14 @@ export default function ShotCard({ shot, index, onReshoot, onDialogueChange, onM
 
   const recommended = recommendVideoModel(shot)
   const currentModel = shot.videoModel || 'auto'
+  const needsShoot = !shot.imageUrl && shot.pipeline.image.status === 'pending'
+
+  const handleShoot = async () => {
+    if (!onShoot || isShooting || allDone) return
+    setIsShooting(true)
+    await onShoot(shot.id)
+    setIsShooting(false)
+  }
 
   const handleReshoot = async () => {
     if (!customPrompt.trim()) return
@@ -65,6 +75,15 @@ export default function ShotCard({ shot, index, onReshoot, onDialogueChange, onM
                   ))}
                 </select>
                 <PipelineIndicator pipeline={shot.pipeline} />
+                {needsShoot && onShoot && (
+                  <button
+                    onClick={handleShoot}
+                    disabled={isShooting}
+                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded disabled:opacity-40 transition-colors"
+                  >
+                    {isShooting ? '生成中...' : '生成'}
+                  </button>
+                )}
               </div>
             </div>
 

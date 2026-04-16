@@ -19,10 +19,10 @@ import CollapsiblePanel from '@/components/shared/CollapsiblePanel'
 export default function Stage3Page() {
   const {
     project, generateShots, isGeneratingShots, startShoot, isShooting, cancelShoot,
-    reshootShot, updateShotDialogue, updateShotVideoModel, setStage,
+    shootSingleShot, reshootShot, updateShotDialogue, updateShotVideoModel, setStage,
   } = useProjectStore()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState('episodes')
+  const [activeTab, setActiveTab] = useState('shots')
 
   if (!project) return null
 
@@ -34,6 +34,17 @@ export default function Stage3Page() {
   }, 0)
   const progress = totalPipelines > 0 ? (donePipelines / totalPipelines) * 100 : 0
   const allDone = totalPipelines > 0 && donePipelines === totalPipelines
+  const ungeneratedShots = shots.filter(s => !s.imageUrl || !s.videoUrl)
+  const [isShootingSingle, setIsShootingSingle] = useState(false)
+
+  const handleShootSingle = async () => {
+    if (isShootingSingle || ungeneratedShots.length === 0) return
+    setIsShootingSingle(true)
+    for (const shot of ungeneratedShots) {
+      await shootSingleShot(shot.id)
+    }
+    setIsShootingSingle(false)
+  }
 
   const handleNext = () => {
     setStage(4)
@@ -52,19 +63,28 @@ export default function Stage3Page() {
         <Button onClick={generateShots} loading={isGeneratingShots} disabled={shots.length > 0}>
           {shots.length > 0 ? `${shots.length} 个镜头` : '生成镜头'}
         </Button>
-        {shots.length > 0 && !isShooting && !allDone && (
-          <Button onClick={startShoot} variant="primary">
-            自动开拍
-          </Button>
-        )}
-        {isShooting && (
+        {shots.length > 0 && (
           <>
-            <Button onClick={() => cancelShoot?.()} variant="secondary" size="sm">⏸ 暂停</Button>
-            <Spinner size={20} label="拍摄中..." />
+            {!isShooting && ungeneratedShots.length > 0 && (
+              <Button onClick={handleShootSingle} disabled={isShootingSingle || isShooting} variant="secondary">
+                {isShootingSingle ? '单个生成中...' : `单个生成 (${ungeneratedShots.length})`}
+              </Button>
+            )}
+            {!isShooting && !allDone && (
+              <Button onClick={startShoot} variant="primary">
+                全部生成
+              </Button>
+            )}
+            {isShooting && (
+              <>
+                <Button onClick={() => cancelShoot?.()} variant="secondary" size="sm">⏸ 暂停</Button>
+                <Spinner size={20} label="生成中..." />
+              </>
+            )}
+            {!isShooting && shots.some(s => s.pipeline.image.status === 'done' || s.pipeline.video.status === 'done') && !allDone && (
+              <Button onClick={startShoot} variant="primary" size="sm">▶️ 继续</Button>
+            )}
           </>
-        )}
-        {!isShooting && shots.some(s => s.pipeline.image.status === 'done' || s.pipeline.video.status === 'done') && !allDone && (
-          <Button onClick={startShoot} variant="primary" size="sm">▶️ 继续拍摄</Button>
         )}
       </div>
 
@@ -73,43 +93,48 @@ export default function Stage3Page() {
         <ProgressBar value={progress} label={`拍摄进度 (${donePipelines}/${totalPipelines})`} />
       )}
 
+      {/* Tab 切换：剧集 vs 镜头 */}
       {shots.length > 0 && (
-        <>
-          {/* Tab 切换：剧集 vs 镜头 */}
-          <Tabs
-            items={[
-              { key: 'episodes', label: '剧集', count: episodes.length },
-              { key: 'shots', label: '全部镜头' },
-            ]}
-            activeKey={activeTab}
-            onChange={setActiveTab}
-          />
+        <Tabs
+          items={[
+            { key: 'shots', label: '全部镜头', count: shots.length },
+            { key: 'episodes', label: '剧集', count: episodes.length },
+          ]}
+          activeKey={activeTab}
+          onChange={setActiveTab}
+        />
+      )}
 
-          {activeTab === 'episodes' ? (
-            <>
-              {/* 剧集面板 */}
-              <EpisodePanel />
-
-              {/* 时间线 */}
-              <Timeline shots={shots} />
-            </>
-          ) : (
-            <>
-              {/* 全部镜头列表 */}
-              <div className="space-y-3">
-                {shots.map((shot, i) => (
-                  <ShotCard
-                    key={shot.id}
-                    shot={shot}
-                    index={i}
-                    onReshoot={reshootShot}
-                    onDialogueChange={updateShotDialogue}
-                    onModelChange={updateShotVideoModel}
-                  />
-                ))}
-              </div>
-            </>
+      {activeTab === 'shots' ? (
+        /* 全部镜头列表 */
+        <div className="space-y-3">
+          {shots.length === 0 && (
+            <div className="card p-8 text-center">
+              <p className="text-[#a0a0b8] mb-3">暂无镜头，请先在第一步填写剧本后点击「生成镜头」</p>
+              <Button onClick={() => router.push(`/project/${project.id}/stage1`)} variant="secondary" size="sm">
+                去第一步写剧本
+              </Button>
+            </div>
           )}
+          {shots.map((shot, i) => (
+            <ShotCard
+              key={shot.id}
+              shot={shot}
+              index={i}
+              onShoot={shootSingleShot}
+              onReshoot={reshootShot}
+              onDialogueChange={updateShotDialogue}
+              onModelChange={updateShotVideoModel}
+            />
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* 剧集面板 */}
+          <EpisodePanel />
+
+          {/* 时间线 */}
+          {shots.length > 0 && <Timeline shots={shots} />}
         </>
       )}
 
