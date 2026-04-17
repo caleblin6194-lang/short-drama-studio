@@ -4,7 +4,7 @@
  * This keeps API keys on the server and avoids CORS from the browser.
  */
 
-import type { Shot, PipelineStage } from '@/types'
+import type { Shot, PipelineStage, CharacterAsset } from '@/types'
 
 export type ShootPipelineStage = 'image' | 'video' | 'audio'
 
@@ -45,6 +45,7 @@ async function getJson<T>(url: string): Promise<T> {
 export function startRealShootPipeline(
   shots: Shot[],
   callbacks: ShootPipelineCallbacks,
+  lockedCharacters?: CharacterAsset[],
 ): () => void {
   let cancelled = false
 
@@ -62,9 +63,14 @@ export function startRealShootPipeline(
         let imageUrl = shot.imageUrl
 
         if (!imageUrl) {
+          // Find a locked character referenced in this shot's description
+          const refChar = lockedCharacters?.find(
+            c => c.isLocked && c.lockedImageUrl && shot.description.includes(c.name),
+          )
           const imageResult = await postJson<ImageApiResponse>('/api/shoot/image', {
             prompt: shot.description,
             size: '2K',
+            referenceImageUrl: refChar?.lockedImageUrl,
           })
 
           if (imageResult.status === 'done' && imageResult.imageUrl) {

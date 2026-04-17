@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     note: '新用户注册赠送 2000 积分',
   })
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     user: {
       id: data.user.id,
       email: data.user.email,
@@ -70,4 +70,20 @@ export async function POST(req: NextRequest) {
       expiresAt: data.session.expires_at,
     } : null,
   })
+
+  // 写 httpOnly cookie 供 middleware 路由保护使用
+  if (data.session) {
+    const maxAge = data.session.expires_at
+      ? data.session.expires_at - Math.floor(Date.now() / 1000)
+      : 60 * 60 * 24 * 7
+    response.cookies.set('sb-access-token', data.session.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge,
+    })
+  }
+
+  return response
 }

@@ -28,24 +28,43 @@
     "title": "ステップ1：ストーリー",
     "subtitle": "タグを選択してドラマを定義、AIが撮影パラメータを自動導出",
     "generateOpenings": "オープニング生成",
-    "scriptPlaceholder": "脚本を入力または編集..."
+    "scriptPlaceholder": "脚本を入力または編集...",
+    "emotionalArc": "感情曲線",
+    "hookLibrary": "バイラルフック集",
+    "retentionAdvisor": "完走率アドバイザー"
   },
   "stage2": {
     "title": "ステップ2：制作準備",
-    "subtitle": "シーン、キャラクター、小道具を選択"
+    "subtitle": "シーン、キャラクター、小道具を選択",
+    "characterConsistency": "キャラクター一貫性",
+    "lockCharacter": "ロック",
+    "unlockCharacter": "ロック解除",
+    "lockedBadge": "✓ 撮影に統合済み — 参照画像が使用されます"
   },
   "stage3": {
     "title": "ステップ3：撮影開始",
     "subtitle": "AIが各ショットの画像、ビデオ、オーディオを自動生成",
     "generateShots": "ショット生成",
     "autoShoot": "自動撮影",
-    "shooting": "撮影中..."
+    "shooting": "撮影中...",
+    "subtitleSync": "字幕同期",
+    "applySubtitles": "字幕を適用",
+    "downloadSrt": "SRT ダウンロード",
+    "downloadVtt": "VTT ダウンロード",
+    "transitionAssign": "ショットに割り当て",
+    "episodePanel": "エピソード管理"
   },
   "stage4": {
     "title": "ステップ4：最終プレビュー",
     "subtitle": "プレビュー、字幕とBGMの調整、書き出しまたは地域バリアント生成",
     "render": "レンダリング",
-    "rendering": "レンダリング中..."
+    "rendering": "レンダリング中...",
+    "cliffhanger": "クリフハンガー最適化",
+    "applyToEpisode": "最終話に適用",
+    "bgmAutoRecommend": "推奨 BGM を適用",
+    "talkToEdit": "トーク編集",
+    "variantGenerate": "生成",
+    "variantRetry": "再試行"
   },
   "dashboard": {
     "overview": "ダッシュボード",

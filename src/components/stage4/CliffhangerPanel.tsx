@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useProjectStore } from '@/store/useProjectStore'
 import Button from '@/components/shared/Button'
+import type { EmotionalTone } from '@/types'
 
 const HOOK_TYPES = [
   { id: 'suspense', label: '悬念钩子', emoji: '❓', desc: '留下未解之谜，吸引追看' },
@@ -13,7 +14,7 @@ const HOOK_TYPES = [
 ]
 
 export default function CliffhangerPanel() {
-  const { project } = useProjectStore()
+  const { project, updateShotDialogue, updateEpisode } = useProjectStore()
   const [selectedHook, setSelectedHook] = useState<string>('suspense')
   const [generated, setGenerated] = useState('')
   const [loading, setLoading] = useState(false)
@@ -72,19 +73,19 @@ export default function CliffhangerPanel() {
     setLoading(false)
   }
 
+  const [applied, setApplied] = useState(false)
+
   const handleApply = () => {
-    // Apply to last episode title or save as cliffhanger metadata
-    if (lastEpisode && generated) {
-      const updatedEpisodes = [...project.episodes]
-      const idx = updatedEpisodes.length - 1
-      updatedEpisodes[idx] = {
-        ...updatedEpisodes[idx],
-        title: updatedEpisodes[idx].title + '（待续）',
-        emotionalTone: 'cliffhanger' as const,
-      }
-      // Would call projectStore.updateEpisode here
+    if (!generated) return
+    // Update last shot's dialogue with cliffhanger text
+    if (lastShot) {
+      updateShotDialogue(lastShot.id, generated)
     }
-    setGenerated('')
+    // Set last episode to cliffhanger tone
+    if (lastEpisode) {
+      updateEpisode(lastEpisode.id, { emotionalTone: 'cliffhanger' as EmotionalTone })
+    }
+    setApplied(true)
   }
 
   return (
@@ -171,10 +172,16 @@ export default function CliffhangerPanel() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleApply} className="flex-1" variant="primary">
-              应用到最后一集
-            </Button>
-            <Button onClick={handleGenerate} variant="ghost" className="flex-1">
+            {!applied ? (
+              <Button onClick={handleApply} className="flex-1" variant="primary">
+                应用到最后一集
+              </Button>
+            ) : (
+              <div className="flex-1 text-center py-2 text-sm text-[#00b894]">
+                ✅ 已应用到最后一集
+              </div>
+            )}
+            <Button onClick={() => { setGenerated(''); setApplied(false) }} variant="ghost" className="flex-1">
               换一个
             </Button>
           </div>

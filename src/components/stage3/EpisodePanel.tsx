@@ -22,7 +22,7 @@ const EMOTIONAL_COLORS: Record<EmotionalTone, string> = {
 }
 
 export default function EpisodePanel() {
-  const { project, addEpisode, removeEpisode, updateEpisode } = useProjectStore()
+  const { project, addEpisode, removeEpisode, updateEpisode, isShooting } = useProjectStore()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
 
@@ -49,9 +49,17 @@ export default function EpisodePanel() {
         </Button>
       </div>
 
-      {episodes.length === 0 && (
+      {episodes.length === 0 && !isShooting && (
         <div className="text-center py-6 text-[#6a6a8e] text-sm">
           暂无剧集，点击「新增集」开始
+        </div>
+      )}
+
+      {isShooting && episodes.every(e => e.shots.length === 0) && (
+        <div className="space-y-2 animate-pulse">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-14 rounded-xl bg-[#1a1a2e] border border-[#2a2a3e]" />
+          ))}
         </div>
       )}
 

@@ -4,16 +4,8 @@ import { useState } from 'react'
 import { useProjectStore } from '@/store/useProjectStore'
 
 type TransitionType =
-  | 'fade'
-  | 'cross_dissolve'
-  | 'flash'
-  | 'slow_zoom'
-  | 'shake'
-  | 'blur'
-  | 'bw_flash'
-  | 'slide_left'
-  | 'slide_right'
-  | 'wipe'
+  | 'fade' | 'cross_dissolve' | 'flash' | 'slow_zoom' | 'shake'
+  | 'blur' | 'bw_flash' | 'slide_left' | 'slide_right' | 'wipe'
 
 interface Transition {
   id: TransitionType
@@ -36,30 +28,44 @@ const TRANSITIONS: Transition[] = [
   { id: 'wipe', name: '擦除', emoji: '🧹', desc: '从边缘擦除', useCase: '适合场景明确切换' },
 ]
 
+const CATEGORIES: [string, TransitionType[]][] = [
+  ['情绪类', ['fade', 'cross_dissolve', 'flash']],
+  ['强调类', ['slow_zoom', 'shake']],
+  ['叙事类', ['blur', 'bw_flash', 'slide_left', 'slide_right', 'wipe']],
+]
+
 export default function TransitionLibrary() {
-  const { project } = useProjectStore()
+  const { project, setShotTransition } = useProjectStore()
   const [selected, setSelected] = useState<TransitionType>('fade')
+  const [targetShotIndex, setTargetShotIndex] = useState(0)
+  const [applied, setApplied] = useState<string | null>(null)
 
   if (!project) return null
+
+  const shots = project.shots
+
+  const handleAssign = () => {
+    const shot = shots[targetShotIndex]
+    if (!shot) return
+    setShotTransition(shot.id, selected)
+    setApplied(`已为第${targetShotIndex + 1}镜头设置「${TRANSITIONS.find(t => t.id === selected)?.name}」转场`)
+    setTimeout(() => setApplied(null), 3000)
+  }
+
+  const selectedTransition = TRANSITIONS.find(t => t.id === selected)
 
   return (
     <div className="card p-4 space-y-4">
       <div>
         <h3 className="text-sm font-medium text-[#a0a0b8] mb-1">🎬 转场特效库</h3>
         <p className="text-xs text-[#6a6a8e]">
-          短剧专用转场，选择适合情绪场景的效果
+          短剧专用转场，选择并指定到镜头
         </p>
       </div>
 
-      {/* Category hints */}
+      {/* Category filter */}
       <div className="flex flex-wrap gap-2">
-        {(
-          [
-            ['情绪类', ['fade', 'cross_dissolve', 'flash']],
-            ['强调类', ['slow_zoom', 'shake']],
-            ['叙事类', ['blur', 'bw_flash', 'slide_left', 'slide_right', 'wipe']],
-          ] as [string, string[]][]
-        ).map(([category, ids]) => (
+        {CATEGORIES.map(([category, ids]) => (
           <div key={category} className="flex items-center gap-1.5">
             <span className="text-[10px] text-[#6a6a8e]">{category}:</span>
             {ids.map(id => {
@@ -67,7 +73,7 @@ export default function TransitionLibrary() {
               return t ? (
                 <button
                   key={id}
-                  onClick={() => setSelected(id as TransitionType)}
+                  onClick={() => setSelected(id)}
                   className={`text-xs px-1.5 py-0.5 rounded transition-all cursor-pointer border ${
                     selected === id
                       ? 'border-[#6c5ce7] bg-[#6c5ce7]/20 text-white'
@@ -82,27 +88,21 @@ export default function TransitionLibrary() {
         ))}
       </div>
 
-      {/* Selected transition details */}
-      <div className="p-3 rounded-xl bg-[#12121e] border border-[#2a2a3e]">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">
-            {TRANSITIONS.find(t => t.id === selected)?.emoji}
-          </span>
-          <div className="flex-1">
-            <div className="text-sm font-medium text-white">
-              {TRANSITIONS.find(t => t.id === selected)?.name}
-            </div>
-            <div className="text-xs text-[#6a6a8e]">
-              {TRANSITIONS.find(t => t.id === selected)?.desc}
+      {/* Selected detail */}
+      {selectedTransition && (
+        <div className="p-3 rounded-xl bg-[#12121e] border border-[#2a2a3e]">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{selectedTransition.emoji}</span>
+            <div className="flex-1">
+              <div className="text-sm font-medium text-white">{selectedTransition.name}</div>
+              <div className="text-xs text-[#6a6a8e]">{selectedTransition.desc}</div>
             </div>
           </div>
+          <div className="mt-2 pt-2 border-t border-[#2a2a3e]">
+            <span className="text-xs text-[#6c5ce7]">适用场景: {selectedTransition.useCase}</span>
+          </div>
         </div>
-        <div className="mt-2 pt-2 border-t border-[#2a2a3e]">
-          <span className="text-xs text-[#6c5ce7]">
-            适用场景: {TRANSITIONS.find(t => t.id === selected)?.useCase}
-          </span>
-        </div>
-      </div>
+      )}
 
       {/* All transitions grid */}
       <div className="grid grid-cols-2 gap-2">
@@ -118,14 +118,41 @@ export default function TransitionLibrary() {
           >
             <div className="flex items-center gap-2">
               <span className="text-lg">{t.emoji}</span>
-              <span className={`text-sm ${selected === t.id ? 'text-white' : 'text-[#a0a0b8]'}`}>
-                {t.name}
-              </span>
+              <span className={`text-sm ${selected === t.id ? 'text-white' : 'text-[#a0a0b8]'}`}>{t.name}</span>
             </div>
             <div className="text-[10px] text-[#6a6a8e] mt-1">{t.desc}</div>
           </button>
         ))}
       </div>
+
+      {/* Shot assignment */}
+      {shots.length > 0 && (
+        <div className="space-y-2 pt-2 border-t border-[#2a2a3e]">
+          <label className="text-xs text-[#a0a0b8]">指定到镜头</label>
+          <div className="flex gap-2">
+            <select
+              value={targetShotIndex}
+              onChange={e => setTargetShotIndex(Number(e.target.value))}
+              className="flex-1 bg-[#12121e] border border-[#2a2a3e] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6c5ce7]"
+            >
+              {shots.map((shot, i) => (
+                <option key={shot.id} value={i}>
+                  第{i + 1}镜头{shot.transitionIn ? ` (已设: ${shot.transitionIn})` : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleAssign}
+              className="px-4 py-2 rounded-lg text-sm bg-[#6c5ce7] text-white hover:bg-[#7c6cf7] transition-colors"
+            >
+              指定
+            </button>
+          </div>
+          {applied && (
+            <div className="text-xs text-[#00b894]">✓ {applied}</div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

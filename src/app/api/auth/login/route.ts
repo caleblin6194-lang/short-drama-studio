@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     .eq('id', data.user.id)
     .single()
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     user: {
       id: data.user.id,
       email: data.user.email,
@@ -41,4 +41,18 @@ export async function POST(req: NextRequest) {
       expiresAt: data.session.expires_at,
     },
   })
+
+  // 写 httpOnly cookie 供 middleware 路由保护使用
+  const maxAge = data.session.expires_at
+    ? data.session.expires_at - Math.floor(Date.now() / 1000)
+    : 60 * 60 * 24 * 7 // 7 天兜底
+  response.cookies.set('sb-access-token', data.session.access_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge,
+  })
+
+  return response
 }

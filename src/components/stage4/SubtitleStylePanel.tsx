@@ -25,24 +25,45 @@ export default function SubtitleStylePanel({ style, onChange }: SubtitleStylePan
       <div>
         <label className="text-xs text-[#6a6a8e] mb-2 block">预设模板</label>
         <div className="grid grid-cols-2 gap-2">
-          {SUBTITLE_PRESETS.map((preset) => (
-            <button
-              key={preset.label}
-              onClick={() => onChange(preset.value)}
-              className={`px-3 py-2 rounded-lg text-xs text-left transition-all cursor-pointer border ${
-                style.animation === preset.value.animation &&
-                style.position === preset.value.position &&
-                style.fontColor === preset.value.fontColor
-                  ? 'border-[#6c5ce7] bg-[#6c5ce7]/10 text-white'
-                  : 'border-[#2a2a3e] bg-[#1a1a2e] text-[#a0a0b8] hover:border-[#6c5ce7]/50'
-              }`}
-            >
-              <div className="font-medium">{preset.label}</div>
-              <div className="text-[10px] mt-0.5 opacity-60">
-                {ANIMATION_LABELS[preset.value.animation]} · {preset.value.position === 'bottom' ? '底部' : preset.value.position === 'top' ? '顶部' : '居中'}
-              </div>
-            </button>
-          ))}
+          {SUBTITLE_PRESETS.map((preset) => {
+            const isActive = style.animation === preset.value.animation &&
+              style.position === preset.value.position &&
+              style.fontColor === preset.value.fontColor
+            const animClass: Record<SubtitleAnimation, string> = {
+              none: '',
+              fade: 'animate-pulse',
+              typewriter: 'animate-[typewriter_1.5s_steps(8)_infinite]',
+              bounce: 'animate-bounce',
+              karaoke: 'animate-pulse',
+              slide: 'animate-[slideIn_0.5s_ease_infinite_alternate]',
+            }
+            return (
+              <button
+                key={preset.label}
+                onClick={() => onChange(preset.value)}
+                className={`px-3 py-2.5 rounded-lg text-xs text-left transition-all cursor-pointer border overflow-hidden ${
+                  isActive
+                    ? 'border-[#6c5ce7] bg-[#6c5ce7]/10 text-white'
+                    : 'border-[#2a2a3e] bg-[#1a1a2e] text-[#a0a0b8] hover:border-[#6c5ce7]/50'
+                }`}
+              >
+                <div className="font-medium mb-1">{preset.label}</div>
+                {/* Mini preview */}
+                <div
+                  className={`text-[10px] px-1 py-0.5 rounded text-center ${animClass[preset.value.animation] || ''}`}
+                  style={{
+                    color: preset.value.fontColor,
+                    backgroundColor: preset.value.backgroundEnabled ? preset.value.backgroundColor : 'transparent',
+                  }}
+                >
+                  示例字幕
+                </div>
+                <div className="text-[9px] mt-1 opacity-50">
+                  {ANIMATION_LABELS[preset.value.animation]} · {preset.value.position === 'bottom' ? '底部' : preset.value.position === 'top' ? '顶部' : '居中'}
+                </div>
+              </button>
+            )
+          })}
         </div>
       </div>
 

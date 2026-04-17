@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import type { Project, TagSet, Shot, PipelineStage, Opening, RegionVariant, StoryBeatId, StoryStructurePlan, SubtitleStyle, Episode, EmotionalTone, CharacterAsset, PipelineStatus, VideoModelOption } from '@/types'
+import type { Project, TagSet, Shot, PipelineStage, Opening, RegionVariant, StoryBeatId, StoryStructurePlan, SubtitleStyle, Episode, EmotionalTone, CharacterAsset, PipelineStatus, VideoModelOption, SubtitleBlock } from '@/types'
 import { inferConfig } from '@/lib/inferConfig'
 import { createStoryStructurePlan, formatStoryStructureToScript } from '@/lib/storyStructure'
 import { useProjectListStore } from './useProjectListStore'
@@ -64,11 +64,18 @@ interface ProjectStoreState {
   updateShotDialogue: (shotId: string, dialogue: string) => void
   updateShotVideoModel: (shotId: string, model: VideoModelOption) => void
 
+  // Stage 3 extra
+  assignShotToEpisode: (shotId: string, episodeId: string) => void
+  setShotTransition: (shotId: string, transitionType: string) => void
+  updateShotDescription: (shotId: string, description: string) => void
+
   // Stage 4
   renderMasterCut: () => Promise<void>
   toggleSubtitles: () => void
   setSubtitleStyle: (style: SubtitleStyle) => void
   toggleBgm: () => void
+  setBgmTrack: (track: string) => void
+  applySubtitleBlocks: (blocks: SubtitleBlock[]) => void
   createVariant: (regionTag: string) => Promise<void>
 
   // Navigation
@@ -560,23 +567,30 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     })
     const data = await res.json()
     if (!res.ok || data.error) throw new Error(data.error || '生成镜头失败')
-    const shots = data.shots
+    const rawShots = data.shots
     // Group shots into episodes (5 shots per episode default)
     const shotsPerEpisode = 5
     const episodes: Episode[] = []
-    for (let i = 0; i < shots.length; i += shotsPerEpisode) {
-      const episodeShots = shots.slice(i, i + shotsPerEpisode)
+    const totalEps = Math.ceil(rawShots.length / shotsPerEpisode)
+    for (let i = 0; i < rawShots.length; i += shotsPerEpisode) {
+      const epId = uuid()
       const episodeNum = Math.floor(i / shotsPerEpisode) + 1
+      const tone: EmotionalTone = episodeNum === 1 ? 'setup' : episodeNum === totalEps ? 'cliffhanger' : 'conflict'
+      const episodeShots = rawShots.slice(i, i + shotsPerEpisode).map((sh: Shot) => ({ ...sh, episodeId: epId }))
       episodes.push({
-        id: uuid(),
+        id: epId,
         number: episodeNum,
         title: `第${episodeNum}集`,
-        emotionalTone: episodeNum === 1 ? 'setup' : episodeNum === Math.ceil(shots.length / shotsPerEpisode) ? 'cliffhanger' : 'conflict',
+        emotionalTone: tone,
         shots: episodeShots,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
     }
+    const shots = rawShots.map((sh: Shot, idx: number) => {
+      const epIndex = Math.floor(idx / shotsPerEpisode)
+      return { ...sh, episodeId: episodes[epIndex]?.id }
+    })
     set(s => {
       if (!s.project) return { isGeneratingShots: false }
       return { isGeneratingShots: false, project: { ...s.project, shots, episodes, status: 'shooting' } }
@@ -672,8 +686,8 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       },
     }
 
-    // Always use real pipeline - server API routes hold the actual key.
-    const cancel = startRealShootPipeline(p.shots, shootCallbacks)
+    const lockedChars = p.assetLibrary.characters.filter(c => c.isLocked && c.lockedImageUrl)
+    const cancel = startRealShootPipeline(p.shots, shootCallbacks, lockedChars)
 
     set({ cancelShoot: cancel })
   },
@@ -920,6 +934,38 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     get().syncToList()
   },
 
+  assignShotToEpisode: (shotId, episodeId) => {
+    set(s => {
+      if (!s.project) return s
+      const shots = s.project.shots.map(sh => sh.id === shotId ? { ...sh, episodeId } : sh)
+      // Also update episode.shots arrays
+      const episodes = s.project.episodes.map(ep => {
+        const epShots = shots.filter(sh => sh.episodeId === ep.id)
+        return { ...ep, shots: epShots }
+      })
+      return { project: { ...s.project, shots, episodes } }
+    })
+    get().syncToList()
+  },
+
+  setShotTransition: (shotId, transitionType) => {
+    set(s => {
+      if (!s.project) return s
+      const shots = s.project.shots.map(sh => sh.id === shotId ? { ...sh, transitionIn: transitionType } : sh)
+      return { project: { ...s.project, shots } }
+    })
+    get().syncToList()
+  },
+
+  updateShotDescription: (shotId, description) => {
+    set(s => {
+      if (!s.project) return s
+      const shots = s.project.shots.map(sh => sh.id === shotId ? { ...sh, description } : sh)
+      return { project: { ...s.project, shots } }
+    })
+    get().syncToList()
+  },
+
   // === Stage 4 ===
   renderMasterCut: async () => {
     const p = get().project
@@ -1015,6 +1061,32 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         },
       }
     })
+  },
+
+  setBgmTrack: (track) => {
+    set(s => {
+      if (!s.project?.masterCut) return s
+      return {
+        project: {
+          ...s.project,
+          masterCut: { ...s.project.masterCut, bgmTrack: track, bgmEnabled: true },
+        },
+      }
+    })
+    get().syncToList()
+  },
+
+  applySubtitleBlocks: (blocks) => {
+    set(s => {
+      if (!s.project?.masterCut) return s
+      return {
+        project: {
+          ...s.project,
+          masterCut: { ...s.project.masterCut, subtitleBlocks: blocks, subtitlesEnabled: true },
+        },
+      }
+    })
+    get().syncToList()
   },
 
   createVariant: async (regionTag) => {

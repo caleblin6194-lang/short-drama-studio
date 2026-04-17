@@ -120,6 +120,8 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         set({ currentUser: null, accessToken: null, isAuthenticated: false, error: null })
+        // 清除服务端 httpOnly cookie（fire-and-forget）
+        fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
       },
 
       updateProfile: (patch) => {

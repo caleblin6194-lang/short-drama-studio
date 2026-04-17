@@ -78,26 +78,43 @@ export default function EmotionalArcPanel() {
         </div>
       </div>
 
-      {/* Arc line */}
-      <div className="relative h-0">
-        <svg className="absolute -top-16 left-0 w-full h-16 pointer-events-none" preserveAspectRatio="none">
-          <polyline
-            fill="none"
-            stroke="#6c5ce7"
-            strokeWidth="2"
-            strokeDasharray="4 2"
-            points={episodes.map((ep, i) => {
-              const x = (i / (episodes.length - 1 || 1)) * 100
-              const y = {
-                setup: 75,
-                conflict: 50,
-                climax: 10,
-                resolution: 60,
-                cliffhanger: 30,
-              }[ep.emotionalTone]
-              return `${x}%,${y}%`
-            }).join(' ')}
-          />
+      {/* Arc line — uses viewBox coordinates so % is not needed */}
+      <div className="relative -mt-2">
+        <svg
+          viewBox={`0 0 100 40`}
+          className="w-full h-10 pointer-events-none"
+          preserveAspectRatio="none"
+        >
+          <defs>
+            <linearGradient id="arcGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#6c5ce7" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#a29bfe" stopOpacity="0.9" />
+            </linearGradient>
+          </defs>
+          {episodes.length > 1 && (
+            <polyline
+              fill="none"
+              stroke="url(#arcGrad)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              points={episodes.map((ep, i) => {
+                const x = (i / (episodes.length - 1)) * 96 + 2
+                const yMap: Record<string, number> = {
+                  setup: 32, conflict: 18, climax: 4, resolution: 26, cliffhanger: 10,
+                }
+                return `${x},${yMap[ep.emotionalTone] ?? 20}`
+              }).join(' ')}
+            />
+          )}
+          {episodes.map((ep, i) => {
+            const x = episodes.length > 1 ? (i / (episodes.length - 1)) * 96 + 2 : 50
+            const yMap: Record<string, number> = {
+              setup: 32, conflict: 18, climax: 4, resolution: 26, cliffhanger: 10,
+            }
+            const y = yMap[ep.emotionalTone] ?? 20
+            return <circle key={ep.id} cx={x} cy={y} r="2.5" fill="#6c5ce7" />
+          })}
         </svg>
       </div>
 

@@ -46,7 +46,7 @@ export default function CharacterConsistencyPanel() {
                 />
               )}
               {char.isLocked && (
-                <div className="absolute top-0 right-0 bg-[#6c5ce7] text-white text-[8px] px-1 rounded-bl">
+                <div className="absolute top-0 right-0 bg-[#6c5ce7] text-white text-[8px] px-1 rounded-bl" title="已集成拍摄参考">
                   🔒
                 </div>
               )}
@@ -67,6 +67,19 @@ export default function CharacterConsistencyPanel() {
                 </span>
               </div>
               <p className="text-xs text-[#6a6a8e] truncate mt-0.5">{char.description}</p>
+              {char.isLocked && char.lockedImageUrl && (
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <img
+                    src={char.lockedImageUrl}
+                    alt="参考图"
+                    className="w-7 h-7 rounded object-cover border border-[#6c5ce7]/40"
+                    title="第三步拍摄时将使用此形象作为参考"
+                  />
+                  <span className="text-[10px] text-[#6c5ce7]" title="锁定角色后，第三步拍摄时将使用此形象作为参考">
+                    参考图已锁定
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Lock/Unlock button */}
@@ -77,6 +90,7 @@ export default function CharacterConsistencyPanel() {
                 char.isLocked ? unlockCharacter(char.id) : lockCharacter(char.id)
               }
               className="flex-shrink-0"
+              title={char.isLocked ? '解锁角色形象' : '锁定角色后，第三步拍摄时将使用此形象作为参考'}
             >
               {char.isLocked ? '解锁' : '锁定'}
             </Button>
@@ -86,12 +100,19 @@ export default function CharacterConsistencyPanel() {
 
       {/* Stats */}
       {characters.length > 0 && (
-        <div className="pt-2 border-t border-[#2a2a3e] flex items-center justify-between text-xs">
-          <span className="text-[#6a6a8e]">
-            {characters.filter((c) => c.isLocked).length} / {characters.length} 已锁定
-          </span>
-          {characters.filter((c) => c.isLocked).length === characters.length && characters.length > 0 && (
-            <span className="text-[#00b894]">✓ 所有角色已锁定</span>
+        <div className="pt-2 border-t border-[#2a2a3e] space-y-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[#6a6a8e]">
+              {characters.filter((c) => c.isLocked).length} / {characters.length} 已锁定
+            </span>
+            {characters.filter((c) => c.isLocked).length === characters.length && characters.length > 0 && (
+              <span className="text-[#00b894]">✓ 所有角色已锁定</span>
+            )}
+          </div>
+          {characters.some(c => c.isLocked) && (
+            <div className="text-[10px] text-[#6c5ce7] bg-[#6c5ce7]/10 rounded-lg px-2 py-1.5">
+              ✓ 已集成拍摄 — 第三步生成镜头时将以锁定图像为参考，保持角色外貌一致
+            </div>
           )}
         </div>
       )}

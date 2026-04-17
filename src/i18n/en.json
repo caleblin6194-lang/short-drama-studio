@@ -28,24 +28,43 @@
     "title": "Step 1: Story",
     "subtitle": "Select tags to define your drama, AI auto-derives shooting parameters",
     "generateOpenings": "Generate Opening",
-    "scriptPlaceholder": "Enter or edit your script..."
+    "scriptPlaceholder": "Enter or edit your script...",
+    "emotionalArc": "Emotional Arc",
+    "hookLibrary": "Viral Hook Library",
+    "retentionAdvisor": "Retention Advisor"
   },
   "stage2": {
     "title": "Step 2: Production Prep",
-    "subtitle": "Select scenes, characters, and props"
+    "subtitle": "Select scenes, characters, and props",
+    "characterConsistency": "Character Consistency",
+    "lockCharacter": "Lock",
+    "unlockCharacter": "Unlock",
+    "lockedBadge": "✓ Integrated into shooting — reference image will be used"
   },
   "stage3": {
     "title": "Step 3: Start Shooting",
     "subtitle": "AI auto-generates images, videos, and audio for each shot",
     "generateShots": "Generate Shots",
     "autoShoot": "Auto Shoot",
-    "shooting": "Shooting..."
+    "shooting": "Shooting...",
+    "subtitleSync": "Subtitle Sync",
+    "applySubtitles": "Apply Subtitles",
+    "downloadSrt": "Download SRT",
+    "downloadVtt": "Download VTT",
+    "transitionAssign": "Assign to Shot",
+    "episodePanel": "Episode Management"
   },
   "stage4": {
     "title": "Step 4: Final Preview",
     "subtitle": "Preview, adjust subtitles and BGM, export or generate regional variants",
     "render": "Render Video",
-    "rendering": "Rendering..."
+    "rendering": "Rendering...",
+    "cliffhanger": "Cliffhanger Optimizer",
+    "applyToEpisode": "Apply to Last Episode",
+    "bgmAutoRecommend": "Apply Recommended BGM",
+    "talkToEdit": "Talk-to-Edit",
+    "variantGenerate": "Generate",
+    "variantRetry": "Retry"
   },
   "dashboard": {
     "overview": "Dashboard",

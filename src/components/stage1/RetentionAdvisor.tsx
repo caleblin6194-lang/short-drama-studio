@@ -133,6 +133,15 @@ export default function RetentionAdvisor() {
       score -= 8
     }
 
+    // Shot-level analysis bonus
+    const shots = project.shots ?? []
+    if (shots.length > 0) {
+      const dialogueRatio = shots.filter(s => s.dialogue?.trim()).length / shots.length
+      if (dialogueRatio > 0.6) score += 5  // Good dialogue density
+      const episodeCount = project.episodes?.length ?? 0
+      if (episodeCount >= 3) score += 3   // Multiple episodes structured
+    }
+
     setOverallScore(Math.max(30, Math.min(100, score)))
     setIssues(foundIssues.sort((a, b) => {
       const order = { high: 0, medium: 1, low: 2 }

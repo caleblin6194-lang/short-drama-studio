@@ -165,6 +165,8 @@ export interface Shot {
   videoUrl?: string
   audioUrl?: string
   finalClipUrl?: string
+  episodeId?: string
+  transitionIn?: string
 }
 
 // ===== Episode =====
@@ -220,6 +222,16 @@ export const SUBTITLE_PRESETS: { label: string; value: SubtitleStyle }[] = [
   },
 ]
 
+// ===== Subtitle Block =====
+export interface SubtitleBlock {
+  id: string
+  shotId: string
+  text: string
+  startSec: number
+  endSec: number
+  speaker?: string
+}
+
 // ===== Master Cut =====
 export interface MasterCut {
   id: string
@@ -230,6 +242,7 @@ export interface MasterCut {
   bgmTrack?: string
   renderedUrl?: string
   durationSec: number
+  subtitleBlocks?: SubtitleBlock[]
 }
 
 // ===== Region Variant =====

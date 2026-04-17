@@ -34,6 +34,8 @@ export default function Stage3Page() {
   }, 0)
   const progress = totalPipelines > 0 ? (donePipelines / totalPipelines) * 100 : 0
   const allDone = totalPipelines > 0 && donePipelines === totalPipelines
+  const anyDone = shots.some(s => s.pipeline.image.status === 'done')
+  const failedCount = shots.filter(s => s.pipeline.image.status === 'failed').length
   const ungeneratedShots = shots.filter(s => !s.imageUrl || !s.videoUrl)
   const [isShootingSingle, setIsShootingSingle] = useState(false)
 
@@ -131,7 +133,13 @@ export default function Stage3Page() {
           <EpisodePanel />
 
           {/* 时间线 */}
-          {shots.length > 0 && <Timeline shots={shots} />}
+          {shots.length > 0 && (
+            <Timeline
+              shots={shots}
+              episodes={episodes}
+              subtitleBlocks={project.masterCut?.subtitleBlocks}
+            />
+          )}
         </>
       )}
 
@@ -156,8 +164,11 @@ export default function Stage3Page() {
       </CollapsiblePanel>
 
       {/* 下一步 */}
-      <div className="flex justify-end pt-4 border-t border-[#2a2a3e]">
-        <Button onClick={handleNext} disabled={!allDone} size="lg">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#2a2a3e]">
+        {failedCount > 0 && (
+          <span className="text-xs text-yellow-400">{failedCount} 个镜头失败，可跳过继续</span>
+        )}
+        <Button onClick={handleNext} disabled={!anyDone} size="lg">
           下一步：成片预览 →
         </Button>
       </div>

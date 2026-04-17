@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useProjectStore } from '@/store/useProjectStore'
 import AssetGrid from '@/components/stage2/AssetGrid'
@@ -9,6 +10,7 @@ import Spinner from '@/components/shared/Spinner'
 import CollapsiblePanel from '@/components/shared/CollapsiblePanel'
 
 export default function Stage2Page() {
+  const [characterPanelOpen, setCharacterPanelOpen] = useState(false)
   const { project, parseScript, isParsingScript, imageGenProgress, approveAsset, approveAllAssets, resetAssetApprovals, reshootAsset, addAsset, setStage } = useProjectStore()
   const router = useRouter()
 
@@ -37,7 +39,7 @@ export default function Stage2Page() {
           {totalAssets > 0 ? '已解析' : '解析剧本'}
         </Button>
         {totalAssets > 0 && !allApproved && (
-          <Button variant="secondary" onClick={approveAllAssets}>
+          <Button variant="secondary" onClick={() => { approveAllAssets(); setCharacterPanelOpen(true) }}>
             全部通过 ({approvedCount}/{totalAssets})
           </Button>
         )}
@@ -95,7 +97,7 @@ export default function Stage2Page() {
 
       {/* 角色一致性面板 */}
       {lib.characters.length > 0 && (
-        <CollapsiblePanel title="角色一致性" icon="👤">
+        <CollapsiblePanel title="角色一致性" icon="👤" forceOpen={characterPanelOpen}>
           <CharacterConsistencyPanel />
         </CollapsiblePanel>
       )}

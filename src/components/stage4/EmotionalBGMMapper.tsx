@@ -13,7 +13,7 @@ const STORY_BEAT_MOOD_MAP: Record<string, { bgmMood: string; emoji: string; labe
 }
 
 export default function EmotionalBGMMapper() {
-  const { project } = useProjectStore()
+  const { project, setBgmTrack } = useProjectStore()
   const [generating, setGenerating] = useState(false)
   const [segments, setSegments] = useState<{ beat: string; mood: string; emoji: string; label: string; duration: string }[]>([])
   const [generated, setGenerated] = useState(false)
@@ -175,6 +175,23 @@ export default function EmotionalBGMMapper() {
           <div className="pt-2 border-t border-[#2a2a3e] text-xs text-[#6a6a8e] text-center">
             实际BGM将在渲染时自动拼接生成
           </div>
+
+          {/* Apply dominant mood to masterCut */}
+          {segments.length > 0 && (() => {
+            const dominant = segments.reduce<Record<string, number>>((acc, s) => {
+              acc[s.mood] = (acc[s.mood] || 0) + 1
+              return acc
+            }, {})
+            const topMood = Object.entries(dominant).sort((a, b) => b[1] - a[1])[0]?.[0] || 'epic'
+            return (
+              <button
+                onClick={() => { setBgmTrack(topMood); }}
+                className="w-full py-2 rounded-xl text-sm bg-[#6c5ce7]/20 border border-[#6c5ce7]/40 text-[#6c5ce7] hover:bg-[#6c5ce7]/30 transition-colors"
+              >
+                ✨ 应用推荐 BGM（{topMood}）到成片
+              </button>
+            )
+          })()}
 
           <Button
             onClick={() => setGenerated(false)}

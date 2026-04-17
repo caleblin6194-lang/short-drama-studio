@@ -1,12 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
+import { useCreditsStore } from '@/store/useCreditsStore'
 
 export default function TopNav() {
   const router = useRouter()
+  const pathname = usePathname()
   const { isAuthenticated, currentUser, logout } = useAuthStore()
+  const remaining = useCreditsStore(s => s.balance?.remaining ?? 0)
+  const monthlyBudget = useCreditsStore(s => s.balance?.monthlyBudget ?? 1)
+
+  // 制作流水线页面全屏显示，不需要 TopNav
+  if (pathname === '/create') return null
 
   const handleLogout = () => {
     logout()
@@ -27,6 +34,21 @@ export default function TopNav() {
                 管理后台
               </Link>
             )}
+            {/* Credit balance indicator */}
+            <Link
+              href="/dashboard/credits"
+              className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
+                remaining < monthlyBudget * 0.1
+                  ? 'border-red-500/40 text-red-400 bg-red-500/10'
+                  : remaining < monthlyBudget * 0.3
+                  ? 'border-yellow-500/40 text-yellow-400 bg-yellow-500/10'
+                  : 'border-[#2a2a3e] text-[#a0a0b8] hover:border-[#6c5ce7]/50'
+              }`}
+              title={`积分余额: ${remaining} / ${monthlyBudget}`}
+            >
+              <span>💎</span>
+              <span>{remaining.toLocaleString()}</span>
+            </Link>
             <Link href="/dashboard/overview" className="text-xs text-[#a0a0b8] hover:text-white transition-colors">
               会员中心
             </Link>

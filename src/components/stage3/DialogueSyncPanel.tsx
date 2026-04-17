@@ -2,20 +2,15 @@
 
 import { useState } from 'react'
 import { useProjectStore } from '@/store/useProjectStore'
+import type { SubtitleBlock } from '@/types'
 import Button from '@/components/shared/Button'
 
-interface SubtitleBlock {
-  id: string
-  shotId: string
-  text: string
-  startSec: number
-  endSec: number
-}
-
 export default function DialogueSyncPanel() {
-  const { project } = useProjectStore()
+  const { project, applySubtitleBlocks } = useProjectStore()
   const [syncing, setSyncing] = useState(false)
   const [subtitleBlocks, setSubtitleBlocks] = useState<SubtitleBlock[]>([])
+  const [srtContent, setSrtContent] = useState('')
+  const [vttContent, setVttContent] = useState('')
   const [applied, setApplied] = useState(false)
   const [totalDuration, setTotalDuration] = useState(0)
   const [error, setError] = useState('')
@@ -28,6 +23,7 @@ export default function DialogueSyncPanel() {
     if (shots.length === 0) return
     setSyncing(true)
     setError('')
+    setApplied(false)
 
     try {
       const res = await fetch('/api/subtitle-sync', {
@@ -35,13 +31,12 @@ export default function DialogueSyncPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId: project.id,
-          shots: shots.map(s => ({
-            id: s.id,
-            dialogue: s.dialogue || '',
-            audioUrl: s.audioUrl,
-            startTime: 0,
-            duration: 5,
-          })),
+          shots: shots.reduce<{ id: string; dialogue: string; audioUrl?: string; startTime: number; duration: number }[]>((acc, s) => {
+            const prev = acc[acc.length - 1]
+            const startTime = prev ? prev.startTime + prev.duration : 0
+            acc.push({ id: s.id, dialogue: s.dialogue || '', audioUrl: s.audioUrl, startTime, duration: s.durationSec || 5 })
+            return acc
+          }, []),
         }),
       })
 
@@ -49,13 +44,29 @@ export default function DialogueSyncPanel() {
       if (!res.ok) throw new Error(data.error || 'Sync failed')
 
       setSubtitleBlocks(data.blocks)
+      setSrtContent(data.srt || '')
+      setVttContent(data.vtt || '')
       setTotalDuration(data.totalDuration)
-      setApplied(false)
     } catch (err: any) {
       setError(err.message || '同步失败')
     } finally {
       setSyncing(false)
     }
+  }
+
+  const handleApply = () => {
+    applySubtitleBlocks(subtitleBlocks)
+    setApplied(true)
+  }
+
+  const downloadFile = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: mime })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const formatTime = (sec: number) => {
@@ -64,12 +75,14 @@ export default function DialogueSyncPanel() {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   }
 
+  const projectName = project.title || 'subtitle'
+
   return (
     <div className="card p-4 space-y-4">
       <div>
         <h3 className="text-sm font-medium text-[#a0a0b8] mb-1">🎙️ 智能字幕时间轴</h3>
         <p className="text-xs text-[#6a6a8e]">
-          AI Whisper 语音识别 · 自动对齐字幕时间 · 支持 SRT/VTT 导出
+          Whisper ASR 语音识别 · 自动对齐字幕时间 · 支持 SRT/VTT 导出
         </p>
       </div>
 
@@ -96,9 +109,9 @@ export default function DialogueSyncPanel() {
               </div>
               <div>
                 <div className="text-lg text-white font-bold">
-                  ~{Math.ceil(shots.reduce((sum, s) => sum + (s.dialogue?.length || 0) / 8, 0))}s
+                  ~{Math.ceil(shots.reduce((sum, s) => sum + (s.durationSec || 5), 0))}s
                 </div>
-                <div className="text-[10px] text-[#6a6a8e]">预计时长</div>
+                <div className="text-[10px] text-[#6a6a8e]">总时长</div>
               </div>
             </div>
           </div>
@@ -141,10 +154,7 @@ export default function DialogueSyncPanel() {
             <div className="text-xs text-[#6a6a8e] mb-2">字幕时间轴预览</div>
             <div className="space-y-1 max-h-40 overflow-y-auto">
               {subtitleBlocks.slice(0, 8).map((block) => (
-                <div
-                  key={block.id}
-                  className="flex items-start gap-2 text-xs"
-                >
+                <div key={block.id} className="flex items-start gap-2 text-xs">
                   <span className="text-[#6c5ce7] font-mono whitespace-nowrap">
                     {formatTime(block.startSec)}-{formatTime(block.endSec)}
                   </span>
@@ -159,33 +169,60 @@ export default function DialogueSyncPanel() {
             </div>
           </div>
 
-          {/* Export options */}
+          {/* Apply + export */}
           <div className="flex gap-2">
-            <Button
-              onClick={() => setApplied(true)}
-              className="flex-1"
-              variant="primary"
-            >
+            <Button onClick={handleApply} className="flex-1" variant="primary">
               应用字幕
             </Button>
-            <Button
-              onClick={handleAutoSync}
-              variant="ghost"
-              className="flex-1"
-            >
+            <Button onClick={handleAutoSync} variant="ghost" className="flex-1">
               重新生成
             </Button>
+          </div>
+
+          {/* Download buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => downloadFile(srtContent, `${projectName}.srt`, 'text/plain')}
+              className="flex-1 py-2 rounded-lg text-xs border border-[#2a2a3e] text-[#a0a0b8] hover:border-[#6c5ce7] hover:text-white transition-all"
+            >
+              ⬇ 下载 SRT
+            </button>
+            <button
+              onClick={() => downloadFile(vttContent, `${projectName}.vtt`, 'text/vtt')}
+              className="flex-1 py-2 rounded-lg text-xs border border-[#2a2a3e] text-[#a0a0b8] hover:border-[#6c5ce7] hover:text-white transition-all"
+            >
+              ⬇ 下载 VTT
+            </button>
           </div>
         </>
       )}
 
       {applied && (
-        <div className="text-center py-4">
-          <div className="text-2xl mb-2">✅</div>
-          <div className="text-[#00b894] text-sm mb-1">字幕已应用</div>
-          <div className="text-xs text-[#6a6a8e]">
-            共 {subtitleBlocks.length} 条 · 格式 SRT/VTT · 可导出
+        <div className="space-y-3">
+          <div className="text-center py-3">
+            <div className="text-2xl mb-2">✅</div>
+            <div className="text-[#00b894] text-sm mb-1">字幕已应用到成片</div>
+            <div className="text-xs text-[#6a6a8e]">
+              共 {subtitleBlocks.length} 条 · 可在第四步字幕样式中调整
+            </div>
           </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => downloadFile(srtContent, `${projectName}.srt`, 'text/plain')}
+              className="flex-1 py-2 rounded-lg text-xs border border-[#2a2a3e] text-[#a0a0b8] hover:border-[#6c5ce7] hover:text-white transition-all"
+            >
+              ⬇ 下载 SRT
+            </button>
+            <button
+              onClick={() => downloadFile(vttContent, `${projectName}.vtt`, 'text/vtt')}
+              className="flex-1 py-2 rounded-lg text-xs border border-[#2a2a3e] text-[#a0a0b8] hover:border-[#6c5ce7] hover:text-white transition-all"
+            >
+              ⬇ 下载 VTT
+            </button>
+          </div>
+          <Button onClick={() => { setApplied(false); setSubtitleBlocks([]) }} variant="ghost" className="w-full">
+            重新同步
+          </Button>
         </div>
       )}
     </div>

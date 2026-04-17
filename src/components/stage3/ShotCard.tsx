@@ -57,7 +57,19 @@ export default function ShotCard({ shot, index, onShoot, onReshoot, onDialogueCh
           {/* 内容 */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-[#a0a0b8]">{shot.sceneRef} · {shot.durationSec}s</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs text-[#a0a0b8]">{shot.sceneRef} · {shot.durationSec}s</span>
+                {shot.episodeId && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#2a2a3e] text-[#a0a0b8]">
+                    E{shot.episodeId.slice(-1)}
+                  </span>
+                )}
+                {shot.transitionIn && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#6c5ce7]/20 text-[#6c5ce7]" title={`转场: ${shot.transitionIn}`}>
+                    ⟩ {shot.transitionIn}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 {recommended !== 'auto' && currentModel === 'auto' && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#6c5ce7]/20 text-[#6c5ce7]">推荐 {VIDEO_MODEL_META[recommended].label}</span>
