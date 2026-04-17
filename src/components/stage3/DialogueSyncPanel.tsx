@@ -47,8 +47,8 @@ export default function DialogueSyncPanel() {
       setSrtContent(data.srt || '')
       setVttContent(data.vtt || '')
       setTotalDuration(data.totalDuration)
-    } catch (err: any) {
-      setError(err.message || '同步失败')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '同步失败')
     } finally {
       setSyncing(false)
     }

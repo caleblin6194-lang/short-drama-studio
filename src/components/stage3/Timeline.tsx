@@ -15,7 +15,6 @@ const TONE_LABELS: Record<string, string> = {
 }
 
 function ShotBlock({ shot, index, subtitleBlocks }: { shot: Shot; index: number; subtitleBlocks?: SubtitleBlock[] }) {
-  const stages = [shot.pipeline.image, shot.pipeline.video, shot.pipeline.audio]
   const hasSubs = subtitleBlocks?.some(b => b.shotId === shot.id) ?? false
 
   return (

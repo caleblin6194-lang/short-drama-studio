@@ -19,10 +19,11 @@ import CollapsiblePanel from '@/components/shared/CollapsiblePanel'
 export default function Stage3Page() {
   const {
     project, generateShots, isGeneratingShots, startShoot, isShooting, cancelShoot,
-    shootSingleShot, reshootShot, updateShotDialogue, updateShotVideoModel, setStage,
+    shootSingleShot, reshootShot, updateShotVideoModel, setStage,
   } = useProjectStore()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('shots')
+  const [isShootingSingle, setIsShootingSingle] = useState(false)
 
   if (!project) return null
 
@@ -37,7 +38,6 @@ export default function Stage3Page() {
   const anyDone = shots.some(s => s.pipeline.image.status === 'done')
   const failedCount = shots.filter(s => s.pipeline.image.status === 'failed').length
   const ungeneratedShots = shots.filter(s => !s.imageUrl || !s.videoUrl)
-  const [isShootingSingle, setIsShootingSingle] = useState(false)
 
   const handleShootSingle = async () => {
     if (isShootingSingle || ungeneratedShots.length === 0) return
@@ -122,7 +122,6 @@ export default function Stage3Page() {
               index={i}
               onShoot={shootSingleShot}
               onReshoot={reshootShot}
-              onDialogueChange={updateShotDialogue}
               onModelChange={updateShotVideoModel}
             />
           ))}

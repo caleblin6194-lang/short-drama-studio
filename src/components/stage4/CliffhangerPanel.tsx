@@ -18,6 +18,7 @@ export default function CliffhangerPanel() {
   const [selectedHook, setSelectedHook] = useState<string>('suspense')
   const [generated, setGenerated] = useState('')
   const [loading, setLoading] = useState(false)
+  const [applied, setApplied] = useState(false)
 
   if (!project) return null
 
@@ -72,8 +73,6 @@ export default function CliffhangerPanel() {
 
     setLoading(false)
   }
-
-  const [applied, setApplied] = useState(false)
 
   const handleApply = () => {
     if (!generated) return

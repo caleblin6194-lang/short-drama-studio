@@ -24,9 +24,7 @@ export default function StoryStructurePanel() {
     applyStoryStructureToScript,
   } = useProjectStore()
 
-  if (!project) return null
-
-  const plan = project.storyStructure
+  const plan = project?.storyStructure ?? null
 
   const characterLine = useMemo(() => {
     if (!plan) return ''
@@ -37,6 +35,8 @@ export default function StoryStructurePanel() {
     if (!plan) return ''
     return plan.hookScene.dialogueLines.join('\n')
   }, [plan])
+
+  if (!project) return null
 
   return (
     <div className="card p-4 space-y-4">

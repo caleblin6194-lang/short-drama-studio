@@ -10,7 +10,6 @@ interface ShotCardProps {
   index: number
   onShoot?: (shotId: string) => Promise<void>
   onReshoot: (shotId: string, instruction: string, model?: VideoModelOption) => Promise<void>
-  onDialogueChange: (shotId: string, dialogue: string) => void
   onModelChange: (shotId: string, model: VideoModelOption) => void
 }
 
@@ -18,7 +17,7 @@ const MODEL_OPTIONS: VideoModelOption[] = ['auto', 'seedance-1-0-fast', 'seedanc
 
 type PreviewType = 'image' | 'video' | 'audio' | null
 
-export default function ShotCard({ shot, index, onShoot, onReshoot, onDialogueChange, onModelChange }: ShotCardProps) {
+export default function ShotCard({ shot, index, onShoot, onReshoot, onModelChange }: ShotCardProps) {
   const [isReshooting, setIsReshooting] = useState(false)
   const [isShooting, setIsShooting] = useState(false)
   const [customPrompt, setCustomPrompt] = useState('')

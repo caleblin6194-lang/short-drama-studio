@@ -1,7 +1,6 @@
 'use client'
 
 import { useProjectStore } from '@/store/useProjectStore'
-import type { CharacterAsset } from '@/types'
 import Button from '@/components/shared/Button'
 
 export default function CharacterConsistencyPanel() {

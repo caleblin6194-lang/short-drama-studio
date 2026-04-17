@@ -1,6 +1,9 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useParams } from 'next/navigation'
+
+const NOW = Date.now()
 import { useAdminStore } from '@/store/useAdminStore'
 import Badge from '@/components/shared/Badge'
 import UserAvatar from '@/components/shared/UserAvatar'
@@ -11,6 +14,11 @@ export default function AdminUserDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { users, banUser, unbanUser } = useAdminStore()
   const user = users.find(u => u.id === id)
+
+  const daysSinceCreation = useMemo(() =>
+    user ? Math.floor((NOW - new Date(user.createdAt).getTime()) / 86400000) : 0,
+    [user]
+  )
 
   if (!user) {
     return <div className="text-[#a0a0b8] py-16 text-center">用户不存在</div>
@@ -50,7 +58,7 @@ export default function AdminUserDetailPage() {
         <StatCard icon="🪙" label="积分余额" value="2,580" color="#6c5ce7" />
         <StatCard icon="🎬" label="项目数" value="3" color="#00b894" />
         <StatCard icon="💰" label="累计消费" value="¥316" color="#0984e3" />
-        <StatCard icon="📅" label="已使用天数" value={Math.floor((Date.now() - new Date(user.createdAt).getTime()) / 86400000)} color="#fdcb6e" />
+        <StatCard icon="📅" label="已使用天数" value={daysSinceCreation} color="#fdcb6e" />
       </div>
     </div>
   )
