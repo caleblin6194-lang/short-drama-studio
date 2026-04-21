@@ -3,35 +3,9 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import { RENDER_DIR, resolveRenderedUrlToPath } from '@/lib/render-files'
 
 const execAsync = promisify(exec)
-const RENDER_DIR = '/var/www/shotforge/renders'
-
-function resolveInputPath(renderedUrl: string): string | null {
-  // Case 1: /api/render/serve?file=output.mp4&job=abc123
-  if (renderedUrl.includes('/api/render/serve')) {
-    const qs = renderedUrl.includes('?') ? renderedUrl.split('?')[1] : ''
-    const params = new URLSearchParams(qs)
-    const file = params.get('file') || 'output.mp4'
-    const job = params.get('job') || ''
-    const candidates = [
-      path.join(RENDER_DIR, job, file),
-      path.join(RENDER_DIR, `render-${job}`, file),
-      path.join('/tmp', job, file),
-      path.join('/tmp', `render-${job}`, file),
-    ]
-    return candidates.find(p => fs.existsSync(p)) ?? null
-  }
-
-  // Case 2: https://verixa.online/renders/render-{jobId}/output.mp4 (legacy URLs)
-  const legacyMatch = renderedUrl.match(/\/renders\/(render-[^/]+)\/(.+)$/)
-  if (legacyMatch) {
-    const p = path.join(RENDER_DIR, legacyMatch[1], legacyMatch[2])
-    return fs.existsSync(p) ? p : null
-  }
-
-  return null
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Try to find the source file directly on disk (avoids self-HTTP-fetch)
-    const diskPath = resolveInputPath(renderedUrl)
+    const diskPath = resolveRenderedUrlToPath(renderedUrl, { allowTmp: true })
     if (!diskPath) {
       return NextResponse.json({ error: '找不到成片文件，请重新渲染后再导出' }, { status: 404 })
     }

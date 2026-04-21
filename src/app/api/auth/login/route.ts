@@ -6,6 +6,10 @@ const DEMO_ACCOUNTS: Record<string, { role: 'user' | 'admin'; name: string }> = 
   'admin@example.com': { role: 'admin', name: 'Admin' },
 }
 
+function isDemoLoginEnabled(): boolean {
+  return process.env.ALLOW_DEMO_LOGIN === '1' && process.env.NODE_ENV !== 'production'
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { email, password } = body
@@ -14,32 +18,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
   }
 
-  // Demo account bypass — no Supabase required
-  if (password === '123456' && DEMO_ACCOUNTS[email]) {
+  if (isDemoLoginEnabled() && password === '123456' && DEMO_ACCOUNTS[email]) {
     const { role, name } = DEMO_ACCOUNTS[email]
     const demoId = `demo-${role}`
+    const expiresAt = Math.floor(Date.now() / 1000) + 86400 * 7
+    const accessToken = `demo-token-${demoId}`
+
     const response = NextResponse.json({
-      user: { id: demoId, email, name, role, credits: role === 'admin' ? 99999 : 500, createdAt: new Date().toISOString() },
-      session: { accessToken: `demo-token-${demoId}`, expiresAt: Math.floor(Date.now() / 1000) + 86400 * 7 },
+      user: {
+        id: demoId,
+        email,
+        name,
+        role,
+        credits: role === 'admin' ? 99999 : 500,
+        createdAt: new Date().toISOString(),
+      },
+      session: {
+        accessToken,
+        expiresAt,
+      },
     })
-    response.cookies.set('sb-access-token', `demo-token-${demoId}`, {
-      httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 86400 * 7,
+
+    response.cookies.set('sb-access-token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 86400 * 7,
     })
+
     return response
   }
 
   if (!hasSupabaseConfig()) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
-  const supabase = getSupabase()
 
+  const supabase = getSupabase()
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
-  if (error || !data.user) {
+  if (error || !data.user || !data.session) {
     return NextResponse.json({ error: error?.message || 'Login failed' }, { status: 401 })
   }
 
-  // Get user profile
   const { data: profile } = await supabase
     .from('users')
     .select('*')
@@ -61,10 +82,10 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  // 写 httpOnly cookie 供 middleware 路由保护使用
   const maxAge = data.session.expires_at
     ? data.session.expires_at - Math.floor(Date.now() / 1000)
-    : 60 * 60 * 24 * 7 // 7 天兜底
+    : 60 * 60 * 24 * 7
+
   response.cookies.set('sb-access-token', data.session.access_token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
