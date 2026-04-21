@@ -1,18 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabase'
 
-export async function POST(req: NextRequest) {
-  if (!hasSupabaseConfig()) {
-    return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
-  }
-  const supabase = getSupabase()
+const DEMO_ACCOUNTS: Record<string, { role: 'user' | 'admin'; name: string }> = {
+  'demo@example.com': { role: 'user', name: 'Demo 用户' },
+  'admin@example.com': { role: 'admin', name: 'Admin' },
+}
 
+export async function POST(req: NextRequest) {
   const body = await req.json()
   const { email, password } = body
 
   if (!email || !password) {
     return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
   }
+
+  // Demo account bypass — no Supabase required
+  if (password === '123456' && DEMO_ACCOUNTS[email]) {
+    const { role, name } = DEMO_ACCOUNTS[email]
+    const demoId = `demo-${role}`
+    const response = NextResponse.json({
+      user: { id: demoId, email, name, role, credits: role === 'admin' ? 99999 : 500, createdAt: new Date().toISOString() },
+      session: { accessToken: `demo-token-${demoId}`, expiresAt: Math.floor(Date.now() / 1000) + 86400 * 7 },
+    })
+    response.cookies.set('sb-access-token', `demo-token-${demoId}`, {
+      httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 86400 * 7,
+    })
+    return response
+  }
+
+  if (!hasSupabaseConfig()) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
+  }
+  const supabase = getSupabase()
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 

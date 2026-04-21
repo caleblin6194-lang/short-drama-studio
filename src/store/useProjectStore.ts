@@ -2,6 +2,7 @@
 
 import { create } from 'zustand'
 import type { Project, TagSet, Shot, PipelineStage, Opening, RegionVariant, StoryBeatId, StoryStructurePlan, SubtitleStyle, Episode, EmotionalTone, CharacterAsset, PipelineStatus, VideoModelOption, SubtitleBlock } from '@/types'
+import { DEFAULT_GLOBAL_CONFIG } from '@/types'
 import { inferConfig } from '@/lib/inferConfig'
 import { createStoryStructurePlan, formatStoryStructureToScript } from '@/lib/storyStructure'
 import { useProjectListStore } from './useProjectListStore'
@@ -11,6 +12,8 @@ import { getCreditCost } from '@/lib/creditCosts'
 import * as gen from '@/mock/generators'
 import { v4 as uuid } from 'uuid'
 import { startRealShootPipeline } from '@/lib/api/shoot-pipeline'
+
+let renderAbortController: AbortController | null = null
 
 interface ProjectStoreState {
   project: Project | null
@@ -47,18 +50,22 @@ interface ProjectStoreState {
   approveAsset: (assetId: string) => void
   approveAllAssets: () => void
   resetAssetApprovals: () => void
-  reshootAsset: (assetId: string) => void
+  reshootAsset: (assetId: string, instruction?: string) => void
+  reshootAllAssets: (kind: 'scene' | 'character' | 'prop') => void
   addAsset: (asset: any, kind: 'scene' | 'character' | 'prop') => void
   lockCharacter: (characterId: string) => void
   unlockCharacter: (characterId: string) => void
 
   // Stage 3
+  deleteShot: (shotId: string) => void
+  insertShot: (afterShotId?: string, episodeId?: string) => void
   generateShots: () => Promise<void>
   addEpisode: () => void
   removeEpisode: (episodeId: string) => void
   updateEpisode: (episodeId: string, patch: Partial<Episode>) => void
   moveShotToEpisode: (shotId: string, fromEpisodeId: string, toEpisodeId: string, newOrder: number) => void
   startShoot: () => void
+  shootEpisode: (episodeId: string) => void
   shootSingleShot: (shotId: string) => Promise<void>
   reshootShot: (shotId: string, instruction: string, model?: VideoModelOption) => Promise<void>
   updateShotDialogue: (shotId: string, dialogue: string) => void
@@ -68,15 +75,21 @@ interface ProjectStoreState {
   assignShotToEpisode: (shotId: string, episodeId: string) => void
   setShotTransition: (shotId: string, transitionType: string) => void
   updateShotDescription: (shotId: string, description: string) => void
+  updateShotNarration: (shotId: string, narration: string) => void
+  toggleNarrationMode: () => void
 
   // Stage 4
   renderMasterCut: () => Promise<void>
+  cancelRender: () => void
   toggleSubtitles: () => void
   setSubtitleStyle: (style: SubtitleStyle) => void
   toggleBgm: () => void
   setBgmTrack: (track: string) => void
   applySubtitleBlocks: (blocks: SubtitleBlock[]) => void
   createVariant: (regionTag: string) => Promise<void>
+
+  // Global config
+  updateGlobalConfig: (patch: Partial<import('@/types').GlobalConfig>) => void
 
   // Navigation
   setStage: (stage: 1 | 2 | 3 | 4) => void
@@ -439,7 +452,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     get().syncToList()
   },
 
-  reshootAsset: (assetId) => {
+  reshootAsset: (assetId, instruction?) => {
     const p = get().project
     if (!p) return
     // Find the asset
@@ -451,9 +464,16 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     if (!asset || !kind) return
 
     let prompt = ''
-    if (kind === 'scene') prompt = `电影级场景画面，${asset.name}，${asset.description ?? ''}，电影光影，高细节，8K`
-    else if (kind === 'character') prompt = `电影级人物肖像，${asset.name}，${asset.description ?? ''}，正脸，高细节，8K`
-    else prompt = `电影级道具特写，${asset.name}，${asset.description ?? ''}，高细节，8K`
+    if (instruction?.trim()) {
+      // User gave specific instruction — blend with asset identity
+      if (kind === 'scene') prompt = `电影级场景画面，${asset.name}，${instruction}，电影光影，高细节，8K`
+      else if (kind === 'character') prompt = `电影级人物肖像，${asset.name}，${instruction}，正脸，高细节，8K`
+      else prompt = `电影级道具特写，${asset.name}，${instruction}，高细节，8K`
+    } else {
+      if (kind === 'scene') prompt = `电影级场景画面，${asset.name}，${asset.description ?? ''}，电影光影，高细节，8K`
+      else if (kind === 'character') prompt = `电影级人物肖像，${asset.name}，${asset.description ?? ''}，正脸，高细节，8K`
+      else prompt = `电影级道具特写，${asset.name}，${asset.description ?? ''}，高细节，8K`
+    }
 
     // Mark as generating
     set(s => {
@@ -508,6 +528,13 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     })
   },
 
+  reshootAllAssets: (kind) => {
+    const p = get().project
+    if (!p) return
+    const assets = kind === 'scene' ? p.assetLibrary.scenes : kind === 'character' ? p.assetLibrary.characters : p.assetLibrary.props
+    for (const a of assets) get().reshootAsset(a.id)
+  },
+
   addAsset: (asset, kind) => {
     set(s => {
       if (!s.project) return s
@@ -553,49 +580,99 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   },
 
   // === Stage 3 ===
+  deleteShot: (shotId) => {
+    set(s => {
+      if (!s.project) return {}
+      const shots = s.project.shots
+        .filter(sh => sh.id !== shotId)
+        .map((sh, i) => ({ ...sh, order: i }))
+      return { project: { ...s.project, shots } }
+    })
+    get().syncToList()
+  },
+
+  insertShot: (afterShotId, episodeId) => {
+    set(s => {
+      if (!s.project) return {}
+      const shots = [...s.project.shots]
+      const idx = afterShotId ? shots.findIndex(sh => sh.id === afterShotId) : shots.length - 1
+      const insertAt = idx >= 0 ? idx + 1 : shots.length
+      // Inherit episodeId from the shot we're inserting after, or use provided episodeId
+      const inheritedEpisodeId = episodeId
+        ?? (afterShotId ? shots.find(sh => sh.id === afterShotId)?.episodeId : undefined)
+      const newShot: import('@/types').Shot = {
+        id: uuid(),
+        number: `S${insertAt + 1}`,
+        order: insertAt,
+        sceneRef: '',
+        characterRefs: [],
+        propRefs: [],
+        description: '新增镜头，请编辑描述后重新生成',
+        dialogue: '',
+        durationSec: 5,
+        episodeId: inheritedEpisodeId,
+        pipeline: {
+          image: { status: 'pending', attemptCount: 0 },
+          video: { status: 'pending', attemptCount: 0 },
+          audio: { status: 'pending', attemptCount: 0 },
+        },
+      }
+      shots.splice(insertAt, 0, newShot)
+      const reordered = shots.map((sh, i) => ({ ...sh, order: i }))
+      return { project: { ...s.project, shots: reordered } }
+    })
+    get().syncToList()
+  },
+
   generateShots: async () => {
     const p = get().project
     const cost = getCreditCost('generate_shots', 'cost_first')
     const ok = useCreditsStore.getState().consumeCredits(cost, p?.id ?? '', p?.title ?? '', '生成镜头')
     if (!ok) { alert('积分不足，无法生成镜头'); return }
     set({ isGeneratingShots: true })
-    const count = p?.inferredConfig.recommendedShotCount ?? 10
-    const res = await fetch('/api/shots/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scriptText: p?.script.rawText ?? '', count }),
-    })
-    const data = await res.json()
-    if (!res.ok || data.error) throw new Error(data.error || '生成镜头失败')
-    const rawShots = data.shots
-    // Group shots into episodes (5 shots per episode default)
-    const shotsPerEpisode = 5
-    const episodes: Episode[] = []
-    const totalEps = Math.ceil(rawShots.length / shotsPerEpisode)
-    for (let i = 0; i < rawShots.length; i += shotsPerEpisode) {
-      const epId = uuid()
-      const episodeNum = Math.floor(i / shotsPerEpisode) + 1
-      const tone: EmotionalTone = episodeNum === 1 ? 'setup' : episodeNum === totalEps ? 'cliffhanger' : 'conflict'
-      const episodeShots = rawShots.slice(i, i + shotsPerEpisode).map((sh: Shot) => ({ ...sh, episodeId: epId }))
-      episodes.push({
-        id: epId,
-        number: episodeNum,
-        title: `第${episodeNum}集`,
-        emotionalTone: tone,
-        shots: episodeShots,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+    try {
+      const res = await fetch('/api/shots/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scriptText: p?.script.rawText ?? '', narrationMode: p?.narrationMode ?? false }),
       })
+      const data = await res.json()
+      if (!res.ok || data.error) { alert(data.error || '生成镜头失败'); return }
+      // Clear stale shots before setting new ones
+      set(s => s.project ? { project: { ...s.project, shots: [], episodes: [] } } : s)
+      const rawShots = data.shots
+      // Detect episode sections from script markers like 第一集 / 第1集 / Episode 1
+      const scriptText = p?.script.rawText ?? ''
+      const EP_RE = /^[\s\S]*?(?=第[一二三四五六七八九十百千\d]+[集话]|Episode\s*\d|第\d+[集话])/i
+      const sectionMatches = [...scriptText.matchAll(
+        /(?:^|\n)(第[一二三四五六七八九十百千\d]+[集话][^\n]*|Episode\s*\d+[^\n]*)/gi
+      )]
+      const sectionCount = sectionMatches.length > 1 ? sectionMatches.length : 1
+      const tones: EmotionalTone[] = ['setup', 'conflict', 'climax', 'cliffhanger', 'resolution']
+      const shotsPerEp = Math.ceil(rawShots.length / sectionCount)
+      const episodes: Episode[] = Array.from({ length: sectionCount }, (_, i) => {
+        const epId = uuid()
+        const label = sectionMatches[i]?.[1]?.trim() || `第${i + 1}集`
+        const epShots = rawShots.slice(i * shotsPerEp, (i + 1) * shotsPerEp)
+        return {
+          id: epId,
+          number: i + 1,
+          title: label.length > 10 ? `第${i + 1}集` : label,
+          emotionalTone: tones[Math.min(i, tones.length - 1)],
+          shots: epShots.map((sh: Shot) => ({ ...sh, episodeId: epId })),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      })
+      const shots = episodes.flatMap(ep => ep.shots as Shot[])
+      set(s => {
+        if (!s.project) return s
+        return { project: { ...s.project, shots, episodes, status: 'shooting', shotsScript: scriptText } }
+      })
+      get().syncToList()
+    } finally {
+      set({ isGeneratingShots: false })
     }
-    const shots = rawShots.map((sh: Shot, idx: number) => {
-      const epIndex = Math.floor(idx / shotsPerEpisode)
-      return { ...sh, episodeId: episodes[epIndex]?.id }
-    })
-    set(s => {
-      if (!s.project) return { isGeneratingShots: false }
-      return { isGeneratingShots: false, project: { ...s.project, shots, episodes, status: 'shooting' } }
-    })
-    get().syncToList()
   },
 
   addEpisode: () => {
@@ -686,9 +763,46 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       },
     }
 
-    const lockedChars = p.assetLibrary.characters.filter(c => c.isLocked && c.lockedImageUrl)
-    const cancel = startRealShootPipeline(p.shots, shootCallbacks, lockedChars)
+    const cancel = startRealShootPipeline(p.shots, shootCallbacks, p.assetLibrary, p.narrationMode, p.globalConfig)
 
+    set({ cancelShoot: cancel })
+  },
+
+  shootEpisode: (episodeId) => {
+    const p = get().project
+    if (!p) return
+    const episodeShots = p.shots.filter(s => s.episodeId === episodeId)
+    if (episodeShots.length === 0) return
+    const cost = getCreditCost('shoot_pipeline', 'cost_first')
+    const ok = useCreditsStore.getState().consumeCredits(cost, p.id, p.title, '拍摄本集')
+    if (!ok) { alert('积分不足，无法开拍'); return }
+    set({ isShooting: true })
+
+    const shootCallbacks = {
+      onShotUpdate: (shotId: string, stage: 'image' | 'video' | 'audio', ps: any) => {
+        set(s => {
+          if (!s.project) return s
+          const shots = s.project.shots.map(sh => {
+            if (sh.id !== shotId) return sh
+            const updated = { ...sh, pipeline: { ...sh.pipeline, [stage]: ps } }
+            if (stage === 'video' && ps.videoUrl) updated.videoUrl = ps.videoUrl
+            if (stage === 'image' && ps.imageUrl) updated.imageUrl = ps.imageUrl
+            if (stage === 'audio' && ps.audioUrl) updated.audioUrl = ps.audioUrl
+            return updated
+          })
+          return { project: { ...s.project, shots } }
+        })
+      },
+      onComplete: () => {
+        set({ isShooting: false, cancelShoot: null })
+        get().syncToList()
+      },
+      onError: (shotId: string, stage: string, error: string) => {
+        console.error(`[ShootEpisode] Shot ${shotId} ${stage} error:`, error)
+      },
+    }
+
+    const cancel = startRealShootPipeline(episodeShots, shootCallbacks, p.assetLibrary, p.narrationMode, p.globalConfig)
     set({ cancelShoot: cancel })
   },
 
@@ -966,6 +1080,23 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     get().syncToList()
   },
 
+  updateShotNarration: (shotId, narration) => {
+    set(s => {
+      if (!s.project) return s
+      const shots = s.project.shots.map(sh => sh.id === shotId ? { ...sh, narration } : sh)
+      return { project: { ...s.project, shots } }
+    })
+    get().syncToList()
+  },
+
+  toggleNarrationMode: () => {
+    set(s => {
+      if (!s.project) return s
+      return { project: { ...s.project, narrationMode: !s.project.narrationMode } }
+    })
+    get().syncToList()
+  },
+
   // === Stage 4 ===
   renderMasterCut: async () => {
     const p = get().project
@@ -973,6 +1104,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     const cost = getCreditCost('render_master_cut', 'cost_first')
     const ok = useCreditsStore.getState().consumeCredits(cost, p.id, p.title, '渲染成片')
     if (!ok) { alert('积分不足，无法渲染'); return }
+    renderAbortController = new AbortController()
     set({ isRendering: true })
     try {
       const shotsWithVideo = p.shots.filter(s =>
@@ -987,8 +1119,16 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         .map(s => ({
           videoUrl: s.videoUrl || s.pipeline.video.videoUrl,
           description: s.description,
+          dialogue: s.dialogue || '',
+          narration: s.narration || '',
+          emotionTag: s.emotionTag || 'neutral',
           durationSec: s.durationSec,
+          transitionIn: s.transitionIn,
         }))
+
+      // Resolve bgmUrl: use current bgmTrack as URL if it looks like a URL, else skip
+      const mc = p.masterCut
+      const bgmUrl = (mc?.bgmEnabled && mc?.bgmTrack?.startsWith('http')) ? mc.bgmTrack : undefined
 
       const res = await fetch('/api/render/master-cut', {
         method: 'POST',
@@ -996,7 +1136,11 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         body: JSON.stringify({
           projectId: p.id,
           shots: renderShots,
+          colorGrading: p.globalConfig?.colorGrading || '',
+          narrationMode: p.narrationMode || false,
+          bgmUrl,
         }),
+        signal: renderAbortController.signal,
       })
       const result = await res.json()
       if (!res.ok || result.error) throw new Error(result.error || '渲染失败')
@@ -1010,10 +1154,10 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
             masterCut: {
               id: uuid(),
               projectId: s.project.id,
-              subtitlesEnabled: true,
-              subtitleStyle: { animation: 'fade', position: 'bottom', fontSize: 'md', fontColor: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', backgroundEnabled: true },
-              bgmEnabled: true,
-              bgmTrack: 'epic_tension',
+              subtitlesEnabled: s.project.masterCut?.subtitlesEnabled ?? true,
+              subtitleStyle: s.project.masterCut?.subtitleStyle ?? { animation: 'fade', position: 'bottom', fontSize: 'md', fontColor: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', backgroundEnabled: true },
+              bgmEnabled: s.project.masterCut?.bgmEnabled ?? false,
+              bgmTrack: s.project.masterCut?.bgmTrack ?? '',
               renderedUrl: result.renderedUrl,
               durationSec: result.durationSec,
             },
@@ -1021,10 +1165,18 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         }
       })
     } catch (err: any) {
-      alert('渲染失败：' + err.message)
+      if (err.name !== 'AbortError') alert('渲染失败：' + err.message)
       set({ isRendering: false })
+    } finally {
+      renderAbortController = null
     }
     get().syncToList()
+  },
+
+  cancelRender: () => {
+    renderAbortController?.abort()
+    renderAbortController = null
+    set({ isRendering: false })
   },
 
   toggleSubtitles: () => {
@@ -1154,6 +1306,19 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       if (!s.project) return s
       const lastEnteredStage = Math.max(s.project.lastEnteredStage, stage) as 1 | 2 | 3 | 4
       return { project: { ...s.project, lastEnteredStage } }
+    })
+    get().syncToList()
+  },
+
+  updateGlobalConfig: (patch) => {
+    set(s => {
+      if (!s.project) return s
+      return {
+        project: {
+          ...s.project,
+          globalConfig: { ...(s.project.globalConfig ?? DEFAULT_GLOBAL_CONFIG), ...patch },
+        },
+      }
     })
     get().syncToList()
   },

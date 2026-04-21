@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase, hasSupabaseConfig } from '@/lib/supabase'
 import { v4 as uuidv4 } from 'uuid'
-import type { RegionTag } from '@/types'
+import { spawn } from 'child_process'
+import { writeFileSync, readFileSync, unlinkSync } from 'fs'
+import type { RegionTag, PlatformSpecs } from '@/types'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const REGION_LANGUAGES: Record<RegionTag, { label: string; system: string; example: string }> = {
@@ -12,6 +14,45 @@ const REGION_LANGUAGES: Record<RegionTag, { label: string; system: string; examp
   '日韩': { label: '日本語', system: 'あなたは短編ドラマの脚本家です。日本観客の好みに合わせて adapt.', example: '三年後' },
   '中东': { label: 'العربية', system: 'You are a short drama screenwriter. Adapt for Middle Eastern audience preferences.', example: 'بعد ثلاث سنوات' },
   '拉美': { label: 'Español', system: 'You are a short drama screenwriter. Adapt for Latin American audience preferences.', example: 'Tres años después' },
+}
+
+const REGION_VOICES: Record<RegionTag, string> = {
+  '国内': 'zh-CN-XiaoxiaoNeural',
+  '北美': 'en-US-JennyNeural',
+  '欧洲': 'en-GB-SoniaNeural',
+  '东南亚': 'id-ID-GadisNeural',
+  '日韩': 'ja-JP-NanamiNeural',
+  '中东': 'ar-EG-SalmaNeural',
+  '拉美': 'es-MX-DaliaNeural',
+}
+
+const REGION_PLATFORM_SPECS: Record<RegionTag, PlatformSpecs> = {
+  '国内': { aspectRatio: '9:16', maxDurationSec: 90, captionStyle: 'burned-in', platformName: '抖音 / 快手 / 红果', platformTag: '竖屏' },
+  '北美': { aspectRatio: '9:16', maxDurationSec: 60, captionStyle: 'srt', platformName: 'TikTok / ReelShort', platformTag: '竖屏' },
+  '欧洲': { aspectRatio: '9:16', maxDurationSec: 75, captionStyle: 'srt', platformName: 'TikTok EU / Shorts', platformTag: '竖屏' },
+  '东南亚': { aspectRatio: '9:16', maxDurationSec: 60, captionStyle: 'burned-in', platformName: 'TikTok SEA / Vidio', platformTag: '竖屏' },
+  '日韩': { aspectRatio: '9:16', maxDurationSec: 60, captionStyle: 'burned-in', platformName: 'TikTok JP / 네이버 시리즈', platformTag: '竖屏' },
+  '中东': { aspectRatio: '9:16', maxDurationSec: 75, captionStyle: 'burned-in', platformName: 'Shahid / TikTok MENA', platformTag: '竖屏' },
+  '拉美': { aspectRatio: '9:16', maxDurationSec: 90, captionStyle: 'srt', platformName: 'TikTok LatAm / Shorts', platformTag: '竖屏' },
+}
+
+async function generateTtsPreview(text: string, voice: string): Promise<string | null> {
+  const preview = text.slice(0, 400).trim()
+  if (!preview) return null
+  const tmpPath = `/tmp/variant-tts-${uuidv4()}.mp3`
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn('python3', ['-m', 'edge_tts', '--text', preview, '--voice', voice, '--write-media', tmpPath])
+      proc.on('close', code => code === 0 ? resolve() : reject(new Error(`edge-tts exit ${code}`)))
+      proc.on('error', reject)
+    })
+    const buf = readFileSync(tmpPath)
+    unlinkSync(tmpPath)
+    return `data:audio/mpeg;base64,${buf.toString('base64')}`
+  } catch {
+    try { unlinkSync(tmpPath) } catch {}
+    return null
+  }
 }
 
 function withAuth(handler: (req: NextRequest, supabase: any, userId: string) => Promise<NextResponse>) {
@@ -101,6 +142,9 @@ export const POST = withAuth(async (req: NextRequest, supabase: any, userId: str
     }
   }
 
+  // Generate TTS audio preview in target language
+  const audioPreviewDataUrl = await generateTtsPreview(adaptedScript, REGION_VOICES[region])
+
   // Build variant object
   const variant = {
     id: variantId,
@@ -111,6 +155,8 @@ export const POST = withAuth(async (req: NextRequest, supabase: any, userId: str
     actualCost: 510,
     adaptedScript,
     adaptationNote,
+    audioPreviewDataUrl,
+    platformSpecs: REGION_PLATFORM_SPECS[region],
     createdAt: new Date().toISOString(),
   }
 

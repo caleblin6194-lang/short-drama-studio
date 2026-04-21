@@ -18,9 +18,9 @@ export interface DoubaoImageResponse {
   error?: string
 }
 
-const API_KEY = process.env.DOUBAN_SEED_API_KEY
-const ENDPOINT = process.env.DOUBAN_IMAGE_ENDPOINT || 'https://ark.cn-beijing.volces.com/api/v3/images/generations'
-const MODEL = process.env.DOUBAN_MODEL || 'doubao-seedream-5-0-260128'
+const API_KEY = process.env.DOUBAN_SEED_API_KEY?.trim()
+const ENDPOINT = (process.env.DOUBAN_IMAGE_ENDPOINT || 'https://ark.cn-beijing.volces.com/api/v3/images/generations').trim()
+const MODEL = (process.env.DOUBAN_MODEL || 'doubao-seedream-5-0-260128').trim()
 
 export async function generateImageWithDoubao(
   req: DoubaoImageRequest
@@ -78,9 +78,48 @@ export async function generateCharacterWithReference(
   referenceImageUrl: string,
   options?: { seed?: number }
 ): Promise<DoubaoImageResponse> {
-  // Seedream 支持参考图 - 在 prompt 中引用
-  const enhancedPrompt = `${prompt} | character consistency with reference image: ${referenceImageUrl}`
-  return generateImageWithDoubao({ prompt: enhancedPrompt, seed: options?.seed })
+  if (!API_KEY) {
+    return mockGenerate({ prompt, seed: options?.seed })
+  }
+
+  try {
+    // Seedream supports reference_images for character/style consistency
+    const response = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        prompt,
+        size: '2k',
+        watermark: false,
+        stream: false,
+        response_format: 'url',
+        sequential_image_generation: 'disabled',
+        seed: options?.seed || Math.floor(Math.random() * 999999),
+        reference_images: [{ type: 'subject', url: referenceImageUrl, weight: 0.8 }],
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      // reference_images may not be supported on all tiers — fall back to text-only
+      console.warn('[Doubao] reference_images failed, falling back to text prompt:', data.error?.message)
+      return generateImageWithDoubao({ prompt, seed: options?.seed })
+    }
+
+    if (data.data?.[0]?.url) return { status: 'done', imageUrl: data.data[0].url }
+    if (data.task_id) return { taskId: data.task_id, status: 'pending' }
+    if (data.error) return { status: 'failed', error: data.error.message || 'Unknown error' }
+
+    return generateImageWithDoubao({ prompt, seed: options?.seed })
+  } catch (err: any) {
+    console.error('[Doubao] reference image error, falling back:', err)
+    return generateImageWithDoubao({ prompt, seed: options?.seed })
+  }
 }
 
 async function mockGenerate(req: DoubaoImageRequest): Promise<DoubaoImageResponse> {

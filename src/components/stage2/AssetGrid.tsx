@@ -10,11 +10,12 @@ import { useUpload } from '@/lib/useUpload'
 interface AssetGridProps {
   library: AssetLibrary
   onApprove: (assetId: string) => void
-  onReshoot: (assetId: string) => void
+  onReshoot: (assetId: string, instruction?: string) => void
+  onReshootAll: (kind: 'scene' | 'character' | 'prop') => void
   onAssetUploaded?: (asset: SceneAsset | CharacterAsset | PropAsset) => void
 }
 
-export default function AssetGrid({ library, onApprove, onReshoot, onAssetUploaded }: AssetGridProps) {
+export default function AssetGrid({ library, onApprove, onReshoot, onReshootAll, onAssetUploaded }: AssetGridProps) {
   const { scenes, characters, props } = library
   const [uploadType, setUploadType] = useState<'scene' | 'character' | 'prop' | null>(null)
   const { upload, uploading } = useUpload()
@@ -46,14 +47,27 @@ export default function AssetGrid({ library, onApprove, onReshoot, onAssetUpload
         <section>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-[#a0a0b8]">🏞️ 场景 ({scenes.length})</h3>
-            <Button size="sm" variant="secondary" onClick={() => setUploadType('scene')}>
-              + 上传场景
-            </Button>
+            <div className="flex gap-2">
+              {scenes.length > 0 && (
+                <Button size="sm" variant="ghost" onClick={() => onReshootAll('scene')}>
+                  🔄 全部重新生成
+                </Button>
+              )}
+              <Button size="sm" variant="secondary" onClick={() => setUploadType('scene')}>
+                + 上传场景
+              </Button>
+            </div>
           </div>
           {scenes.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {scenes.map(s => (
-                <AssetCard key={s.id} asset={s} aspectRatio="4/3" onApprove={() => onApprove(s.id)} onReshoot={() => onReshoot(s.id)} />
+                <AssetCard
+                  key={s.id}
+                  asset={s}
+                  aspectRatio="4/3"
+                  onApprove={() => onApprove(s.id)}
+                  onReshoot={(instruction) => onReshoot(s.id, instruction)}
+                />
               ))}
             </div>
           ) : (
@@ -65,14 +79,27 @@ export default function AssetGrid({ library, onApprove, onReshoot, onAssetUpload
         <section>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-[#a0a0b8]">👤 角色 ({characters.length})</h3>
-            <Button size="sm" variant="secondary" onClick={() => setUploadType('character')}>
-              + 上传角色
-            </Button>
+            <div className="flex gap-2">
+              {characters.length > 0 && (
+                <Button size="sm" variant="ghost" onClick={() => onReshootAll('character')}>
+                  🔄 全部重新生成
+                </Button>
+              )}
+              <Button size="sm" variant="secondary" onClick={() => setUploadType('character')}>
+                + 上传角色
+              </Button>
+            </div>
           </div>
           {characters.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {characters.map(c => (
-                <AssetCard key={c.id} asset={c} aspectRatio="3/4" onApprove={() => onApprove(c.id)} onReshoot={() => onReshoot(c.id)} />
+                <AssetCard
+                  key={c.id}
+                  asset={c}
+                  aspectRatio="3/4"
+                  onApprove={() => onApprove(c.id)}
+                  onReshoot={(instruction) => onReshoot(c.id, instruction)}
+                />
               ))}
             </div>
           ) : (
@@ -80,18 +107,31 @@ export default function AssetGrid({ library, onApprove, onReshoot, onAssetUpload
           )}
         </section>
 
-        {/* 道具 chip */}
+        {/* 道具 1:1 */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-[#a0a0b8]">🎭 道具 ({props.length})</h3>
-            <Button size="sm" variant="secondary" onClick={() => setUploadType('prop')}>
-              + 上传道具
-            </Button>
+            <div className="flex gap-2">
+              {props.length > 0 && (
+                <Button size="sm" variant="ghost" onClick={() => onReshootAll('prop')}>
+                  🔄 全部重新生成
+                </Button>
+              )}
+              <Button size="sm" variant="secondary" onClick={() => setUploadType('prop')}>
+                + 上传道具
+              </Button>
+            </div>
           </div>
           {props.length > 0 ? (
             <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
               {props.map(p => (
-                <AssetCard key={p.id} asset={p} aspectRatio="1/1" onApprove={() => onApprove(p.id)} onReshoot={() => onReshoot(p.id)} />
+                <AssetCard
+                  key={p.id}
+                  asset={p}
+                  aspectRatio="1/1"
+                  onApprove={() => onApprove(p.id)}
+                  onReshoot={(instruction) => onReshoot(p.id, instruction)}
+                />
               ))}
             </div>
           ) : (
@@ -100,7 +140,6 @@ export default function AssetGrid({ library, onApprove, onReshoot, onAssetUpload
         </section>
       </div>
 
-      {/* 上传弹窗 */}
       <UploadDialog
         open={uploadType !== null}
         onClose={() => setUploadType(null)}

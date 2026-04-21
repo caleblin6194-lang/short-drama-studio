@@ -1,11 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as fs from 'fs'
 import * as path from 'path'
-import * as os from 'os'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 
 const execAsync = promisify(exec)
+const RENDER_DIR = '/var/www/shotforge/renders'
+
+function resolveInputPath(renderedUrl: string): string | null {
+  // Case 1: /api/render/serve?file=output.mp4&job=abc123
+  if (renderedUrl.includes('/api/render/serve')) {
+    const qs = renderedUrl.includes('?') ? renderedUrl.split('?')[1] : ''
+    const params = new URLSearchParams(qs)
+    const file = params.get('file') || 'output.mp4'
+    const job = params.get('job') || ''
+    const candidates = [
+      path.join(RENDER_DIR, job, file),
+      path.join(RENDER_DIR, `render-${job}`, file),
+      path.join('/tmp', job, file),
+      path.join('/tmp', `render-${job}`, file),
+    ]
+    return candidates.find(p => fs.existsSync(p)) ?? null
+  }
+
+  // Case 2: https://verixa.online/renders/render-{jobId}/output.mp4 (legacy URLs)
+  const legacyMatch = renderedUrl.match(/\/renders\/(render-[^/]+)\/(.+)$/)
+  if (legacyMatch) {
+    const p = path.join(RENDER_DIR, legacyMatch[1], legacyMatch[2])
+    return fs.existsSync(p) ? p : null
+  }
+
+  return null
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,65 +41,47 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '没有可用的成片' }, { status: 400 })
     }
 
-    // Extract filename from /api/render/serve?file=xxx
-    const fileName = renderedUrl.includes('file=')
-      ? renderedUrl.split('file=')[1].split('&')[0]
-      : ''
-
-    if (!fileName) {
-      return NextResponse.json({ error: '无法解析文件名' }, { status: 400 })
+    // Try to find the source file directly on disk (avoids self-HTTP-fetch)
+    const diskPath = resolveInputPath(renderedUrl)
+    if (!diskPath) {
+      return NextResponse.json({ error: '找不到成片文件，请重新渲染后再导出' }, { status: 404 })
     }
 
-    const tmpDir = os.tmpdir()
     const jobId = Math.random().toString(36).slice(2)
-    const workDir = path.join(tmpDir, `export-${jobId}`)
+    const workDir = path.join(RENDER_DIR, `export-${jobId}`)
     fs.mkdirSync(workDir, { recursive: true })
 
-    // Download original video
-    const inputPath = path.join(workDir, 'input.mp4')
-    try {
-      const response = await fetch(renderedUrl.includes('http') ? renderedUrl : `https://verixa.online${renderedUrl}`)
-      if (!response.ok) throw new Error('下载失败')
-      const buffer = await response.arrayBuffer()
-      fs.writeFileSync(inputPath, Buffer.from(buffer))
-    } catch {
-      return NextResponse.json({ error: '无法下载原始视频' }, { status: 500 })
-    }
-
-    const outputPath = path.join(workDir, `output.mp4`)
+    const inputPath = diskPath
+    const outputPath = path.join(workDir, 'output.mp4')
     let url = ''
 
     if (format === 'vertical') {
-      // 9:16 竖版 - letterbox crop to 9:16 from center
-      // input is likely 16:9, crop to center for 9:16
       await execAsync(
-        `ffmpeg -y -i "${inputPath}" -vf "crop=in_h*9/16:in_h" -c:v libx264 -preset fast -crf 22 "${outputPath}" 2>&1`,
+        `ffmpeg -y -i "${inputPath}" -vf "crop=in_h*9/16:in_h" -c:v libx264 -preset fast -crf 22 -c:a aac "${outputPath}" 2>&1`,
         { timeout: 120000 }
       )
-      url = `/api/render/serve?file=${path.basename(outputPath)}&job=${jobId}&export=vertical`
+      url = `/api/render/serve?file=output.mp4&job=export-${jobId}`
     } else if (format === 'horizontal') {
-      // 16:9 横版 - add letterbox bars top/bottom if needed
       await execAsync(
-        `ffmpeg -y -i "${inputPath}" -vf "pad=iw:iw*16/9:x:(ow-ih)/2:color=black" -c:v libx264 -preset fast -crf 22 "${outputPath}" 2>&1`,
+        `ffmpeg -y -i "${inputPath}" -vf "pad=iw:iw*16/9:(ow-iw)/2:0:color=black" -c:v libx264 -preset fast -crf 22 -c:a aac "${outputPath}" 2>&1`,
         { timeout: 120000 }
       )
-      url = `/api/render/serve?file=${path.basename(outputPath)}&job=${jobId}&export=horizontal`
+      url = `/api/render/serve?file=output.mp4&job=export-${jobId}`
     } else if (format === 'cover') {
-      // 封面图 - extract first frame
       const coverPath = path.join(workDir, 'cover.jpg')
       await execAsync(
-        `ffmpeg -y -i "${inputPath}" -vf "select=eq(n\,0)" -vframes 1 -q:v 2 "${coverPath}" 2>&1`,
+        `ffmpeg -y -i "${inputPath}" -vf "select=eq(n\\,0)" -vframes 1 -q:v 2 "${coverPath}" 2>&1`,
         { timeout: 60000 }
       )
-      url = `/api/render/serve?file=cover.jpg&job=${jobId}&export=cover`
+      url = `/api/render/serve?file=cover.jpg&job=export-${jobId}`
     }
 
-    // Clean up after delay
+    // Clean up after 5 minutes
     setTimeout(() => { try { fs.rmSync(workDir, { recursive: true, force: true }) } catch {} }, 300000)
 
     if (!url) return NextResponse.json({ error: '导出失败' }, { status: 500 })
 
-    return NextResponse.json({ url: `https://verixa.online${url}` })
+    return NextResponse.json({ url })
   } catch (err: any) {
     console.error('Export error:', err)
     return NextResponse.json({ error: err.message || '导出失败' }, { status: 500 })

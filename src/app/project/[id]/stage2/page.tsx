@@ -11,7 +11,7 @@ import CollapsiblePanel from '@/components/shared/CollapsiblePanel'
 
 export default function Stage2Page() {
   const [characterPanelOpen, setCharacterPanelOpen] = useState(false)
-  const { project, parseScript, isParsingScript, imageGenProgress, approveAsset, approveAllAssets, resetAssetApprovals, reshootAsset, addAsset, setStage } = useProjectStore()
+  const { project, parseScript, isParsingScript, imageGenProgress, approveAsset, approveAllAssets, resetAssetApprovals, reshootAsset, reshootAllAssets, addAsset, setStage } = useProjectStore()
   const router = useRouter()
 
   if (!project) return null
@@ -88,7 +88,8 @@ export default function Stage2Page() {
       <AssetGrid
         library={lib}
         onApprove={approveAsset}
-        onReshoot={reshootAsset}
+        onReshoot={(id, instruction) => reshootAsset(id, instruction)}
+        onReshootAll={reshootAllAssets}
         onAssetUploaded={(asset) => {
           const kind = 'kind' in asset ? (asset.kind === 'scene' ? 'scene' : asset.kind === 'character' ? 'character' : 'prop') : 'prop'
           addAsset(asset, kind)

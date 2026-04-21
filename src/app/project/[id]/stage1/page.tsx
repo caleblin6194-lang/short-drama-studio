@@ -13,6 +13,7 @@ import ScriptContinuePanel from '@/components/stage1/ScriptContinuePanel'
 import HookLibraryPanel from '@/components/stage1/HookLibraryPanel'
 import RetentionAdvisor from '@/components/stage1/RetentionAdvisor'
 import DialoguePolishPanel from '@/components/stage1/DialoguePolishPanel'
+import { GlobalConfigPanel } from '@/components/stage1/GlobalConfigPanel'
 import Button from '@/components/shared/Button'
 import CollapsiblePanel from '@/components/shared/CollapsiblePanel'
 
@@ -129,6 +130,11 @@ export default function Stage1Page() {
       {/* 对话智能润色 */}
       <CollapsiblePanel title="对话智能润色" icon="💬">
         <DialoguePolishPanel />
+      </CollapsiblePanel>
+
+      {/* 全局风格锁定 */}
+      <CollapsiblePanel title="全局风格锁定" icon="🎨">
+        <GlobalConfigPanel />
       </CollapsiblePanel>
 
       {/* 下一步 */}

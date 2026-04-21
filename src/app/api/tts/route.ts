@@ -6,13 +6,34 @@ import path from 'path'
 
 export const runtime = 'nodejs'
 
-// Voice options for Chinese TTS
 const VOICES = [
-  'zh-CN-XiaoxiaoNeural', // 晓晓 - friendly female
-  'zh-CN-YunxiNeural',    // 云希 - young male
-  'zh-CN-XiaoyiNeural',   // 小艺 - female
-  'zh-CN-YunyangNeural',  // 云扬 - professional male
+  'zh-CN-XiaoxiaoNeural',
+  'zh-CN-YunxiNeural',
+  'zh-CN-XiaoyiNeural',
+  'zh-CN-YunyangNeural',
+  'en-US-JennyNeural',
+  'en-US-GuyNeural',
+  'en-GB-SoniaNeural',
+  'ja-JP-NanamiNeural',
+  'ja-JP-KeitaNeural',
+  'es-MX-DaliaNeural',
+  'es-ES-ElviraNeural',
+  'ar-EG-SalmaNeural',
+  'id-ID-GadisNeural',
+  'ko-KR-SunHiNeural',
+  'fr-FR-DeniseNeural',
+  'de-DE-KatjaNeural',
 ]
+
+export const REGION_DEFAULT_VOICE: Record<string, string> = {
+  '国内': 'zh-CN-XiaoxiaoNeural',
+  '北美': 'en-US-JennyNeural',
+  '欧洲': 'en-GB-SoniaNeural',
+  '东南亚': 'id-ID-GadisNeural',
+  '日韩': 'ja-JP-NanamiNeural',
+  '中东': 'ar-EG-SalmaNeural',
+  '拉美': 'es-MX-DaliaNeural',
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -68,10 +89,19 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     voices: [
-      { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓（女）', lang: 'zh-CN' },
-      { id: 'zh-CN-YunxiNeural', name: '云希（男）', lang: 'zh-CN' },
-      { id: 'zh-CN-XiaoyiNeural', name: '小艺（女）', lang: 'zh-CN' },
-      { id: 'zh-CN-YunyangNeural', name: '云扬（男）', lang: 'zh-CN' },
-    ]
+      { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓（女）', lang: 'zh-CN', region: '国内' },
+      { id: 'zh-CN-YunxiNeural', name: '云希（男）', lang: 'zh-CN', region: '国内' },
+      { id: 'zh-CN-XiaoyiNeural', name: '小艺（女）', lang: 'zh-CN', region: '国内' },
+      { id: 'zh-CN-YunyangNeural', name: '云扬（男）', lang: 'zh-CN', region: '国内' },
+      { id: 'en-US-JennyNeural', name: 'Jenny (Female)', lang: 'en-US', region: '北美' },
+      { id: 'en-US-GuyNeural', name: 'Guy (Male)', lang: 'en-US', region: '北美' },
+      { id: 'en-GB-SoniaNeural', name: 'Sonia (Female)', lang: 'en-GB', region: '欧洲' },
+      { id: 'ja-JP-NanamiNeural', name: '七海（女）', lang: 'ja-JP', region: '日韩' },
+      { id: 'ja-JP-KeitaNeural', name: '圭太（男）', lang: 'ja-JP', region: '日韩' },
+      { id: 'es-MX-DaliaNeural', name: 'Dalia (Femenino)', lang: 'es-MX', region: '拉美' },
+      { id: 'ar-EG-SalmaNeural', name: 'سلمى (أنثى)', lang: 'ar-EG', region: '中东' },
+      { id: 'id-ID-GadisNeural', name: 'Gadis (Perempuan)', lang: 'id-ID', region: '东南亚' },
+    ],
+    regionDefaults: REGION_DEFAULT_VOICE,
   })
 }

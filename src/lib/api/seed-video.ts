@@ -26,19 +26,19 @@ interface SeedVideoResponse {
   error?: string
 }
 
-const API_KEY = process.env.DOUBAN_SEED_API_KEY
+const API_KEY = process.env.DOUBAN_SEED_API_KEY?.trim()
 // Prefer the contents/generations/tasks endpoint. If the user configured the
 // legacy video/generations URL, transparently rewrite it.
 const RAW_ENDPOINT =
   process.env.SEED_API_ENDPOINT ||
   'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks'
 const TASKS_ENDPOINT = RAW_ENDPOINT.replace(/\/video\/generations\/?$/, '/contents/generations/tasks')
-// Model chain: try cheapest first, fall back to premium
-// 1.0-pro ≈ ¥0.15-0.2/video | 1.5-pro ≈ ¥0.4-0.6/video | 2.0 ≈ ¥1-2/video
+// Model chain: highest quality first, fall back to fast as guaranteed fallback
+// 1.5-pro ≈ ¥0.4-0.6/video | 2.0 ≈ ¥1-2/video | fast ≈ ¥0.15/video (always available)
 const MODELS = [
-  'doubao-seedance-1-0-pro-250528',
   'doubao-seedance-1-5-pro-251215',
   'doubao-seedance-2-0-260128',
+  'doubao-seedance-1-0-pro-fast-251015',  // guaranteed fallback
 ]
 const MODEL_FAST = 'doubao-seedance-1-0-pro-fast-251015'
 
@@ -60,8 +60,13 @@ async function createTask(model: string, req: SeedVideoRequest): Promise<SeedVid
 
   const tryModel = async (modelName: string): Promise<SeedVideoResponse> => {
     try {
+      // Seedance 2.0 only accepts 5/10/15s; 1.x accepts arbitrary durations
+      const rawDur = req.duration || 5
+      const dur = modelName.includes('seedance-2-0')
+        ? (rawDur <= 5 ? 5 : rawDur <= 10 ? 10 : 15)
+        : Math.max(3, Math.min(15, rawDur))
       const content: any[] = [
-        { type: 'text', text: `${req.prompt} --rt ${req.aspectRatio || '9:16'} --rs 720p --dur ${req.duration || 5}` },
+        { type: 'text', text: `${req.prompt} --rt ${req.aspectRatio || '9:16'} --rs 1080p --dur ${dur}` },
       ]
       if (req.imageUrl) {
         content.push({ type: 'image_url', image_url: { url: req.imageUrl } })
@@ -77,6 +82,7 @@ async function createTask(model: string, req: SeedVideoRequest): Promise<SeedVid
       })
 
       const data = await safeJson(response)
+      console.log(`[Seed] createTask ${modelName} status=${response.status} body=`, JSON.stringify(data).slice(0, 300))
 
       if (!response.ok) {
         // Try next model in chain
@@ -93,7 +99,9 @@ async function createTask(model: string, req: SeedVideoRequest): Promise<SeedVid
 
       if (data.id) return { taskId: data.id, status: 'pending' }
       if (data.task_id) return { taskId: data.task_id, status: 'pending' }
-      if (data.content?.video_url) return { status: 'done', videoUrl: data.content.video_url }
+      // content can be an array or object depending on API version
+      const contentVideoUrl = Array.isArray(data.content) ? data.content[0]?.video_url : data.content?.video_url
+      if (contentVideoUrl) return { status: 'done', videoUrl: contentVideoUrl }
 
       // Unexpected response, try next
       const idx = MODELS.indexOf(modelName)
@@ -157,12 +165,17 @@ export async function getSeedVideoStatus(taskId: string): Promise<SeedVideoRespo
     }
 
     const s = data.status as string | undefined
-    if (s === 'succeeded' || data.content?.video_url) {
-      const url = data.content?.video_url || data.video_url
+    console.log('[Seed] task status raw:', JSON.stringify(data).slice(0, 400))
+    // content can be an array (new API) or object (legacy)
+    const contentItem = Array.isArray(data.content) ? data.content[0] : data.content
+    const contentVideoUrl = contentItem?.video_url || contentItem?.url
+    const doneStatuses = ['succeeded', 'success', 'completed', 'done']
+    if (doneStatuses.includes(s ?? '') || contentVideoUrl) {
+      const url = contentVideoUrl || data.video_url || data.output?.video_url
       return { taskId, status: 'done', videoUrl: url }
     }
-    if (s === 'failed' || s === 'cancelled') {
-      return { taskId, status: 'failed', error: data.error?.message || s }
+    if (s === 'failed' || s === 'cancelled' || s === 'error') {
+      return { taskId, status: 'failed', error: data.error?.message || data.message || s }
     }
 
     return { taskId, status: 'pending' }

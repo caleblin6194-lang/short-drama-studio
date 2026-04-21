@@ -11,13 +11,17 @@ interface ShotCardProps {
   onShoot?: (shotId: string) => Promise<void>
   onReshoot: (shotId: string, instruction: string, model?: VideoModelOption) => Promise<void>
   onModelChange: (shotId: string, model: VideoModelOption) => void
+  onDelete?: (shotId: string) => void
+  onInsertAfter?: (shotId: string) => void
+  narrationMode?: boolean
+  onNarrationChange?: (shotId: string, text: string) => void
 }
 
 const MODEL_OPTIONS: VideoModelOption[] = ['auto', 'seedance-1-0-fast', 'seedance-1-0-pro', 'seedance-1-5-pro', 'seedance-2-0']
 
 type PreviewType = 'image' | 'video' | 'audio' | null
 
-export default function ShotCard({ shot, index, onShoot, onReshoot, onModelChange }: ShotCardProps) {
+export default function ShotCard({ shot, index, onShoot, onReshoot, onModelChange, onDelete, onInsertAfter, narrationMode, onNarrationChange }: ShotCardProps) {
   const [isReshooting, setIsReshooting] = useState(false)
   const [isShooting, setIsShooting] = useState(false)
   const [customPrompt, setCustomPrompt] = useState('')
@@ -36,10 +40,9 @@ export default function ShotCard({ shot, index, onShoot, onReshoot, onModelChang
     setIsShooting(false)
   }
 
-  const handleReshoot = async () => {
-    if (!customPrompt.trim()) return
+  const handleReshoot = async (prompt?: string) => {
     setIsReshooting(true)
-    await onReshoot(shot.id, customPrompt, currentModel !== 'auto' ? currentModel : undefined)
+    await onReshoot(shot.id, prompt ?? customPrompt ?? shot.description, currentModel !== 'auto' ? currentModel : undefined)
     setIsReshooting(false)
     setCustomPrompt('')
   }
@@ -58,6 +61,22 @@ export default function ShotCard({ shot, index, onShoot, onReshoot, onModelChang
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs text-[#a0a0b8]">{shot.sceneRef} · {shot.durationSec}s</span>
+                {shot.shotType && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#2a2a3e] text-[#a0a0b8]">
+                    {({ extreme_wide: '极远', wide: '全', medium: '中', close: '近', extreme_close: '特写' } as Record<string,string>)[shot.shotType] ?? shot.shotType}
+                  </span>
+                )}
+                {shot.emotionTag && shot.emotionTag !== 'neutral' && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${{
+                    angry: 'bg-red-500/20 text-red-400',
+                    sad: 'bg-blue-500/20 text-blue-400',
+                    happy: 'bg-green-500/20 text-green-400',
+                    tense: 'bg-yellow-500/20 text-yellow-400',
+                    surprised: 'bg-purple-500/20 text-purple-400',
+                  }[shot.emotionTag] ?? 'bg-gray-500/20 text-gray-400'}`}>
+                    {({ angry: '愤怒', sad: '悲伤', happy: '欢快', tense: '紧张', surprised: '惊讶' } as Record<string,string>)[shot.emotionTag]}
+                  </span>
+                )}
                 {shot.episodeId && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#2a2a3e] text-[#a0a0b8]">
                     E{shot.episodeId.slice(-1)}
@@ -95,13 +114,37 @@ export default function ShotCard({ shot, index, onShoot, onReshoot, onModelChang
                     {isShooting ? '生成中...' : '生成'}
                   </button>
                 )}
+                {onDelete && (
+                  <button
+                    onClick={() => { if (confirm(`删除第 ${index + 1} 个镜头？`)) onDelete(shot.id) }}
+                    title="删除镜头"
+                    className="w-6 h-6 flex items-center justify-center rounded text-[#666] hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                  >
+                    🗑
+                  </button>
+                )}
               </div>
             </div>
 
             <p className="text-sm text-white mb-1">{shot.description}</p>
 
-            {shot.dialogue && (
+            {shot.dialogue && !narrationMode && (
               <p className="text-xs text-[#a0a0b8] italic mb-2">&ldquo;{shot.dialogue}&rdquo;</p>
+            )}
+
+            {narrationMode && (
+              <div className="mt-1 mb-2">
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">旁白</span>
+                </div>
+                <textarea
+                  rows={2}
+                  value={shot.narration ?? ''}
+                  onChange={e => onNarrationChange?.(shot.id, e.target.value)}
+                  placeholder="输入旁白文案（第三人称叙述，将用于配音）..."
+                  className="w-full bg-[#12121e] border border-amber-500/30 rounded px-2 py-1.5 text-xs text-white placeholder-[#555] focus:border-amber-400/60 focus:outline-none resize-none"
+                />
+              </div>
             )}
 
             {/* 预览区 — 点击直接预览，不跳下载 */}
@@ -139,23 +182,32 @@ export default function ShotCard({ shot, index, onShoot, onReshoot, onModelChang
             <div className="flex gap-2 mt-2">
               <input
                 type="text"
-                placeholder="输入提示词，重新生成这个镜头..."
+                placeholder="可选：输入修改意图，留空则直接重拍..."
                 value={customPrompt}
                 onChange={e => setCustomPrompt(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !isReshooting) handleReshoot() }}
                 className="flex-1 bg-[#1a1a2e] border border-[#2a2a3e] rounded px-3 py-1.5 text-xs text-white placeholder-[#666] focus:border-[#6c5ce7] focus:outline-none"
               />
               <button
-                onClick={handleReshoot}
-                disabled={isReshooting || !customPrompt.trim()}
-                className="px-3 py-1.5 bg-[#6c5ce7] text-white text-xs rounded disabled:opacity-40 hover:bg-[#5a4bc7] transition-colors"
+                onClick={() => handleReshoot()}
+                disabled={isReshooting}
+                className="px-3 py-1.5 bg-[#6c5ce7] text-white text-xs rounded disabled:opacity-40 hover:bg-[#5a4bc7] transition-colors whitespace-nowrap"
               >
-                {isReshooting ? '生成中...' : '重新生成'}
+                {isReshooting ? '生成中...' : allDone ? '不满意，重拍' : '重新生成'}
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* 在此镜头后插入 */}
+      {onInsertAfter && (
+        <div className="group flex items-center gap-2 py-1 cursor-pointer" onClick={() => onInsertAfter(shot.id)}>
+          <div className="flex-1 h-px bg-[#2a2a3e] group-hover:bg-[#6c5ce7]/40 transition-colors" />
+          <span className="text-[11px] text-[#444] group-hover:text-[#6c5ce7] transition-colors select-none whitespace-nowrap">＋ 插入镜头</span>
+          <div className="flex-1 h-px bg-[#2a2a3e] group-hover:bg-[#6c5ce7]/40 transition-colors" />
+        </div>
+      )}
 
       {/* 预览弹窗 */}
       {previewType && (

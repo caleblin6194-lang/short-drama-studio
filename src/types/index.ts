@@ -128,6 +128,29 @@ export function recommendVideoModel(shot: Pick<Shot, 'dialogue' | 'description'>
   return 'seedance-1-0-fast'
 }
 
+// ===== Global Config =====
+export interface GlobalConfig {
+  aspectRatio: '9:16' | '16:9' | '1:1'
+  resolution: '1080p' | '4K'
+  fps: 24 | 30
+  styleAnchor: string        // appended to every image/video prompt
+  colorGrading: string       // FFmpeg preset: 'warm' | 'cool' | 'cinematic' | 'vivid' | ''
+  lightingRule: string       // injected into prompt, e.g. "左侧柔光"
+  globalSeed: number         // base seed; shot seed = globalSeed + shot.order
+  prohibitedElements: string // negative prompt hints
+}
+
+export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
+  aspectRatio: '9:16',
+  resolution: '1080p',
+  fps: 24,
+  styleAnchor: '写实电影感，竖屏9:16，高清画质，光线统一',
+  colorGrading: '',
+  lightingRule: '',
+  globalSeed: 42,
+  prohibitedElements: '',
+}
+
 // ===== Shot =====
 export type PipelineStatus = 'pending' | 'queued' | 'rendering' | 'done' | 'failed' | 'stale'
 
@@ -148,6 +171,10 @@ export interface ShotPipeline {
   audio: PipelineStage
 }
 
+export type EmotionTag = 'neutral' | 'angry' | 'sad' | 'surprised' | 'happy' | 'tense'
+export type ShotType = 'extreme_wide' | 'wide' | 'medium' | 'close' | 'extreme_close'
+export type CameraMove = 'static' | 'push' | 'pull' | 'pan' | 'track' | 'orbit' | 'crane'
+
 export interface Shot {
   id: string
   number: string
@@ -167,6 +194,10 @@ export interface Shot {
   finalClipUrl?: string
   episodeId?: string
   transitionIn?: string
+  narration?: string  // narrator voice-over text (used instead of dialogue when narrationMode is on)
+  emotionTag?: EmotionTag
+  shotType?: ShotType
+  cameraMove?: CameraMove
 }
 
 // ===== Episode =====
@@ -248,6 +279,14 @@ export interface MasterCut {
 // ===== Region Variant =====
 export type VariantStatus = 'pending' | 'translating' | 'casting' | 'shooting' | 'mastering' | 'done' | 'failed'
 
+export interface PlatformSpecs {
+  aspectRatio: '9:16' | '16:9' | '1:1'
+  maxDurationSec: number
+  captionStyle: 'burned-in' | 'srt' | 'vtt'
+  platformName: string
+  platformTag: string
+}
+
 export interface RegionVariant {
   id: string
   parentProjectId: string
@@ -255,6 +294,11 @@ export interface RegionVariant {
   status: VariantStatus
   estimatedCost: number
   actualCost?: number
+  adaptedScript?: string
+  adaptationNote?: string
+  audioPreviewDataUrl?: string
+  platformSpecs?: PlatformSpecs
+  createdAt?: string
 }
 
 // ===== Opening =====
@@ -508,10 +552,13 @@ export interface Project {
   lastEnteredStage: 1 | 2 | 3 | 4
   tagSet: TagSet
   inferredConfig: InferredConfig
+  globalConfig?: GlobalConfig
   script: Script
   assetLibrary: AssetLibrary
   episodes: Episode[]
   shots: Shot[]
+  shotsScript?: string  // script rawText snapshot when shots were last generated
+  narrationMode?: boolean  // use narrator voice-over instead of character dialogue
   masterCut: MasterCut | null
   variants: RegionVariant[]
   storyStructure: StoryStructurePlan | null

@@ -17,7 +17,7 @@ import EmotionalBGMMapper from '@/components/stage4/EmotionalBGMMapper'
 
 export default function Stage4Page() {
   const {
-    project, renderMasterCut, isRendering,
+    project, renderMasterCut, cancelRender, isRendering,
     toggleSubtitles, toggleBgm, createVariant,
     setSubtitleStyle,
   } = useProjectStore()
@@ -42,18 +42,22 @@ export default function Stage4Page() {
         <p className="text-sm text-[#a0a0b8]">预览、调整字幕和 BGM，导出或生成地域变体</p>
       </div>
 
-      {/* 渲染按钮 */}
-      {!mc && (
-        <Button onClick={renderMasterCut} loading={isRendering}>
-          渲染成片
-        </Button>
-      )}
-
-      {isRendering && (
-        <div className="py-8 flex justify-center">
-          <Spinner label="正在渲染成片..." />
-        </div>
-      )}
+      {/* 渲染控制栏（常驻） */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {!isRendering ? (
+          <Button onClick={renderMasterCut} variant={mc ? 'ghost' : 'primary'} size={mc ? 'sm' : 'md'}>
+            {mc ? '🔄 重新渲染' : '渲染成片'}
+          </Button>
+        ) : (
+          <>
+            <Spinner size={18} label="正在渲染成片..." />
+            <Button onClick={cancelRender} variant="secondary" size="sm">⏸ 取消渲染</Button>
+          </>
+        )}
+        {mc && !isRendering && (
+          <span className="text-xs text-[#6a6a8e]">成片时长 {mc.durationSec}s · 点击重新渲染可更新</span>
+        )}
+      </div>
 
       {/* 主体布局：左侧播放器 + 右侧控制面板 */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">

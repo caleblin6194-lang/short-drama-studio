@@ -19,16 +19,22 @@ import CollapsiblePanel from '@/components/shared/CollapsiblePanel'
 export default function Stage3Page() {
   const {
     project, generateShots, isGeneratingShots, startShoot, isShooting, cancelShoot,
-    shootSingleShot, reshootShot, updateShotVideoModel, setStage,
+    reshootShot, updateShotVideoModel, setStage, deleteShot, insertShot,
+    toggleNarrationMode, updateShotNarration,
   } = useProjectStore()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('shots')
-  const [isShootingSingle, setIsShootingSingle] = useState(false)
 
   if (!project) return null
 
   const shots = project.shots
   const episodes = project.episodes
+  const currentScript = project.script?.rawText ?? ''
+  // Show banner if: shots exist AND (script snapshot missing OR script has changed)
+  const scriptChanged = shots.length > 0 && (
+    !project.shotsScript || project.shotsScript !== currentScript
+  )
+
   const totalPipelines = shots.length * 3
   const donePipelines = shots.reduce((sum, s) => {
     return sum + (s.pipeline.image.status === 'done' ? 1 : 0) + (s.pipeline.video.status === 'done' ? 1 : 0) + (s.pipeline.audio.status === 'done' ? 1 : 0)
@@ -37,16 +43,6 @@ export default function Stage3Page() {
   const allDone = totalPipelines > 0 && donePipelines === totalPipelines
   const anyDone = shots.some(s => s.pipeline.image.status === 'done')
   const failedCount = shots.filter(s => s.pipeline.image.status === 'failed').length
-  const ungeneratedShots = shots.filter(s => !s.imageUrl || !s.videoUrl)
-
-  const handleShootSingle = async () => {
-    if (isShootingSingle || ungeneratedShots.length === 0) return
-    setIsShootingSingle(true)
-    for (const shot of ungeneratedShots) {
-      await shootSingleShot(shot.id)
-    }
-    setIsShootingSingle(false)
-  }
 
   const handleNext = () => {
     setStage(4)
@@ -60,18 +56,58 @@ export default function Stage3Page() {
         <p className="text-sm text-[#a0a0b8]">AI 自动生成每个镜头的图像、视频和音频</p>
       </div>
 
+      {/* 剧本变更提示横幅 */}
+      {scriptChanged && (
+        <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-4 flex items-start gap-3">
+          <span className="text-yellow-400 text-lg shrink-0">⚠️</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-yellow-300 font-medium">剧本已修改</p>
+            <p className="text-xs text-yellow-400/80 mt-0.5">当前镜头是基于旧剧本生成的，建议重新生成以匹配最新内容。</p>
+          </div>
+          <Button
+            size="sm"
+            variant="primary"
+            loading={isGeneratingShots}
+            onClick={generateShots}
+          >
+            重新生成镜头
+          </Button>
+        </div>
+      )}
+
       {/* 操作栏 */}
-      <div className="flex items-center gap-3">
-        <Button onClick={generateShots} loading={isGeneratingShots} disabled={shots.length > 0}>
-          {shots.length > 0 ? `${shots.length} 个镜头` : '生成镜头'}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button
+          onClick={generateShots}
+          loading={isGeneratingShots}
+          disabled={shots.length > 0 && !scriptChanged}
+        >
+          {shots.length > 0 && !scriptChanged ? `${shots.length} 个镜头` : '生成镜头'}
         </Button>
         {shots.length > 0 && (
+          <Button
+            onClick={generateShots}
+            loading={isGeneratingShots}
+            variant="ghost"
+            size="sm"
+          >
+            🔄 重新生成镜头
+          </Button>
+        )}
+        {/* 旁白模式开关 */}
+        <button
+          onClick={toggleNarrationMode}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            project.narrationMode
+              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+              : 'bg-[#1a1a2e] text-[#a0a0b8] border border-[#2a2a3e] hover:border-[#444]'
+          }`}
+        >
+          <span>🎙️</span>
+          <span>{project.narrationMode ? '旁白模式（开）' : '旁白模式'}</span>
+        </button>
+        {shots.length > 0 && (
           <>
-            {!isShooting && ungeneratedShots.length > 0 && (
-              <Button onClick={handleShootSingle} disabled={isShootingSingle || isShooting} variant="secondary">
-                {isShootingSingle ? '单个生成中...' : `单个生成 (${ungeneratedShots.length})`}
-              </Button>
-            )}
             {!isShooting && !allDone && (
               <Button onClick={startShoot} variant="primary">
                 全部生成
@@ -108,7 +144,6 @@ export default function Stage3Page() {
       )}
 
       {activeTab === 'shots' ? (
-        /* 全部镜头列表 */
         <div className="space-y-3">
           {shots.length === 0 && (
             <div className="card p-8 text-center">
@@ -120,18 +155,26 @@ export default function Stage3Page() {
               key={shot.id}
               shot={shot}
               index={i}
-              onShoot={shootSingleShot}
               onReshoot={reshootShot}
               onModelChange={updateShotVideoModel}
+              onDelete={deleteShot}
+              onInsertAfter={insertShot}
+              narrationMode={project.narrationMode}
+              onNarrationChange={updateShotNarration}
             />
           ))}
+          {shots.length > 0 && (
+            <button
+              onClick={() => insertShot(shots[shots.length - 1]?.id)}
+              className="w-full py-2 rounded-xl border border-dashed border-[#2a2a3e] hover:border-[#6c5ce7]/50 text-[#666] hover:text-[#6c5ce7] text-sm transition-colors"
+            >
+              ＋ 在末尾添加镜头
+            </button>
+          )}
         </div>
       ) : (
         <>
-          {/* 剧集面板 */}
           <EpisodePanel />
-
-          {/* 时间线 */}
           {shots.length > 0 && (
             <Timeline
               shots={shots}
